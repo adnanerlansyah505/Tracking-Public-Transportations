@@ -1,7 +1,7 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
-import { BadRequestException, ValidationError, ValidationPipe } from '@nestjs/common';
+import { BadRequestException, ClassSerializerInterceptor, ValidationError, ValidationPipe } from '@nestjs/common';
 import { AllExceptionsFilter } from './common/filters/all-filter-exceptions';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { getValidationMessage } from './common/validation/validation-messages';
@@ -44,6 +44,9 @@ async function bootstrap() {
     },
   }))
   app.useGlobalFilters(new AllExceptionsFilter());
+  app.useGlobalInterceptors(
+    new ClassSerializerInterceptor(app.get(Reflector)),
+  );
   app.useGlobalInterceptors(new ResponseInterceptor());
   
   // Config

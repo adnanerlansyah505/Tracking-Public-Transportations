@@ -1,8 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { DB } from "../../database/database.module";
 import type { DbClient, DbTransaction } from "../../database/database.module";
-import { users } from "../../database/schema";
-import { and, count, eq, isNull } from "drizzle-orm";
+import { profiles, users } from "../../database/schema";
+import { and, count, eq, isNull, or } from "drizzle-orm";
 
 @Injectable()
 export class UserRepository {
@@ -20,6 +20,10 @@ export class UserRepository {
             this.db
                 .select()
                 .from(users)
+                .leftJoin(
+                    profiles,
+                    and(eq(profiles.userId, users.id), isNull(profiles.deletedAt)),
+                )
                 .where(where)
                 .orderBy(users.createdAt)
                 .limit(pageSize)
@@ -40,6 +44,20 @@ export class UserRepository {
         }
     }
 
+    async find(identifier: string | number) {
+        const [user] = await this.db
+            .select()
+            .from(users)
+            .where(
+                typeof identifier === "number"
+                    ? eq(users.id, identifier.toString())
+                    : eq(users.email, identifier.toLowerCase())
+            )
+            .limit(1);
+        
+        return user ?? null;
+    }
+
     async findByEmail(email: string) {
         const [user] = await this.db
             .select()
@@ -50,7 +68,7 @@ export class UserRepository {
                     isNull(users.deletedAt)
                 )
             )
-            .limit(1)
+            .limit(1);
 
         return user ?? null;
     }
@@ -75,10 +93,10 @@ export class UserRepository {
         tx?: DbTransaction,
     ) {
         const client = tx ?? this.db;
-    const [user] = await client
-            .insert(users)
-            .values(data)
-            .returning()
+        const [user] = await client
+                .insert(users)
+                .values(data)
+                .returning()
 
         return user ?? null;
     }

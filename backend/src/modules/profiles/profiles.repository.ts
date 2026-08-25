@@ -64,13 +64,16 @@ export class ProfileRepository {
             country: string;
             birthDate: string;
             gender: 'male' | 'female';
+            photo: string;
         }>,
+        tx?: DbTransaction
     ) {
-        const [profile] = await this.db
+        const client = tx ?? this.db;
+        const [profile] = await client
             .update(profiles)
             .set({
-            ...data,
-            updatedAt: new Date(),
+                ...data,
+                updatedAt: new Date(),
             })
             .where(eq(profiles.id, id))
             .returning();

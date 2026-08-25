@@ -73,6 +73,7 @@ export class AuthService {
             accessToken: this.jwtService.sign({
                 sub: user.id,
                 email: user.email,
+                role: user.role,
             }),
             user: this.sanitizeUser(user)
         }

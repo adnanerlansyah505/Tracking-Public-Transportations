@@ -15,11 +15,18 @@ import { RolesGuard } from './modules/auth/guards/roles.guard';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ThrottleGuard } from './common/guards/throttler.guard';
 import { CsrfModule } from './modules/csrf/csrf.module';
+import { AppCacheModule } from './common/cache/cache.module';
+import { FileModule } from './common/file/file.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
+    
+    AppCacheModule,
+
+    FileModule,
+
     HealthModule,
     AuthModule,
     UsersModule,
