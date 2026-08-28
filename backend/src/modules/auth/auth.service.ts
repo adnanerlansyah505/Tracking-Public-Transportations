@@ -82,6 +82,12 @@ export class AuthService {
         return this.session(user)
     }
 
+    async me(identifier: string) {
+        const user = await this.userRepository.find(identifier);
+        if (!user) throw new UnauthorizedException("User is not found");
+        return this.sanitizeUser(user);
+    }
+
     async verifyEmail(token: string) {
         if (!token) throw new BadRequestException("Verification token is required");
 
