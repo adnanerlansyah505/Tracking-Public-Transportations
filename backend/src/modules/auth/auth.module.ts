@@ -10,6 +10,7 @@ import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { UsersModule } from '../users/users.module';
 import { ProfilesModule } from '../profiles/profiles.module';
+import { EmailModule } from '../../common/email/email.module';
 // import { GoogleStrategy } from './strategies/google.strategy';
 
 @Module({
@@ -17,7 +18,7 @@ import { ProfilesModule } from '../profiles/profiles.module';
     UsersModule,
     PassportModule,
     ProfilesModule,
-    // EmailModule,
+    EmailModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({

@@ -15,6 +15,20 @@
       "when": 1787578050132,
       "tag": "0001_gorgeous_proudstar",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787944505366,
+      "tag": "0002_pink_kronos",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1787948232480,
+      "tag": "0003_pink_maelstrom",
+      "breakpoints": true
     }
   ]
 }

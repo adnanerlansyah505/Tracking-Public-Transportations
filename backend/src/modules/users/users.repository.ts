@@ -44,7 +44,37 @@ export class UserRepository {
         }
     }
 
-    async find(identifier: string | number) {
+    async find(identifier: string | number, options?: { withProfile?: boolean; }) {
+        if (options?.withProfile) {
+            const [result] = await this.db
+            .select()
+            .from(users)
+            .leftJoin(
+                profiles,
+                and(
+                    eq(profiles.userId, users.id),
+                    isNull(profiles.deletedAt),
+                ),
+            )
+            .where(
+                typeof identifier === "number"
+                    ? eq(users.id, identifier.toString())
+                    : eq(users.email, identifier.toLowerCase())
+            )
+            .limit(1);
+
+            if (!result) {
+                return null;
+            }
+
+            const user = {
+                ...result.users,
+                profile: result.profiles
+            }
+
+            return user;
+        }
+
         const [user] = await this.db
             .select()
             .from(users)
@@ -58,7 +88,38 @@ export class UserRepository {
         return user ?? null;
     }
 
-    async findByEmail(email: string) {
+    async findByEmail(email: string, options?: { withProfile?: boolean; }) {
+        if (options?.withProfile) {
+            const [result] = await this.db
+            .select()
+            .from(users)
+            .leftJoin(
+                profiles,
+                and(
+                    eq(profiles.userId, users.id),
+                    isNull(profiles.deletedAt),
+                ),
+            )
+            .where(
+                and(
+                    eq(users.email, email),
+                    isNull(users.deletedAt),
+                ),
+            )
+            .limit(1);
+
+            if (!result) {
+                return null;
+            }
+
+            const user = {
+                ...result.users,
+                profile: result.profiles
+            }
+
+            return user;
+        }
+
         const [user] = await this.db
             .select()
             .from(users)
@@ -73,7 +134,38 @@ export class UserRepository {
         return user ?? null;
     }
 
-    async findById(id: string) {
+    async findById(id: string, options?: { withProfile?: boolean; }) {
+        if (options?.withProfile) {
+            const [result] = await this.db
+            .select()
+            .from(users)
+            .leftJoin(
+                profiles,
+                and(
+                    eq(profiles.userId, users.id),
+                    isNull(profiles.deletedAt),
+                ),
+            )
+            .where(
+                and(
+                    eq(users.id, id),
+                    isNull(users.deletedAt),
+                ),
+            )
+            .limit(1);
+
+            if (!result) {
+                return null;
+            }
+
+            const user = {
+                ...result.users,
+                profile: result.profiles
+            }
+
+            return user;
+        }
+
         const [user] = await this.db
             .select()
             .from(users)
@@ -84,6 +176,58 @@ export class UserRepository {
                 )
             )
             .limit(1)
+
+        return user ?? null;
+    }
+
+    async findByVerificationToken(
+        tokenHash: string, 
+        options?: { withProfile?: boolean; }
+    ) {
+        if (options?.withProfile) {
+            const [result] = await this.db
+            .select()
+            .from(users)
+            .leftJoin(
+                profiles,
+                and(
+                eq(profiles.userId, users.id),
+                isNull(profiles.deletedAt),
+                ),
+            )
+            .where(
+                and(
+                    eq(users.verificationTokenHash, tokenHash),
+                    isNull(users.deletedAt),
+                ),
+            )
+            .limit(1);
+
+            if (!result) {
+                return null;
+            }
+
+            const user = {
+                ...result.users,
+                profile: result.profiles
+            }
+
+            return user;
+        }
+
+        const [user] = await this.db
+            .select()
+            .from(users)
+            .where(
+            and(
+                eq(
+                users.verificationTokenHash,
+                tokenHash,
+                ),
+                isNull(users.deletedAt),
+            ),
+            )
+            .limit(1);
 
         return user ?? null;
     }
@@ -104,10 +248,15 @@ export class UserRepository {
     async update(
         id: string,
         data: Partial<typeof users.$inferInsert>,
+        tx?: DbTransaction,
     ) {
-        const [user] = await this.db
+        const client = tx ?? this.db;
+        const [user] = await client
         .update(users)
-        .set(data)
+        .set({
+            ...data,
+            updatedAt: new Date(),
+        })
         .where(eq(users.id, id))
         .returning()
 

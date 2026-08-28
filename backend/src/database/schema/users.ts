@@ -9,6 +9,8 @@ export const users = pgTable('users', {
   passwordHash: varchar('password_hash', { length: 255 }).notNull(),
   role: userRoleEnum('role').notNull().default(UserRole.Passenger),
   emailVerifiedAt: timestamp('email_verified_at'),
+  verificationTokenHash: varchar('verification_token_hash'),
+  verificationTokenExpiresAt: timestamp('verification_token_hash_at'),
   status: userStatusEnum('status').notNull().default('active'),
   rememberToken: varchar('remember_token', { length: 255 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),

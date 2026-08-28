@@ -17,6 +17,7 @@ import { ThrottleGuard } from './common/guards/throttler.guard';
 import { CsrfModule } from './modules/csrf/csrf.module';
 import { AppCacheModule } from './common/cache/cache.module';
 import { FileModule } from './common/file/file.module';
+import { EmailModule } from './common/email/email.module';
 
 @Module({
   imports: [
@@ -26,6 +27,8 @@ import { FileModule } from './common/file/file.module';
     AppCacheModule,
 
     FileModule,
+
+    EmailModule,
 
     HealthModule,
     AuthModule,
