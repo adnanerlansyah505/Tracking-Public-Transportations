@@ -79,11 +79,11 @@ export class UserRepository {
             .select()
             .from(users)
             .where(
-                typeof identifier === "number"
-                    ? eq(users.id, identifier.toString())
-                    : eq(users.email, identifier.toLowerCase())
+                or(eq(users.id, identifier.toString()), eq(users.email, identifier.toString()))
             )
             .limit(1);
+
+        console.log(user);
         
         return user ?? null;
     }
@@ -176,58 +176,6 @@ export class UserRepository {
                 )
             )
             .limit(1)
-
-        return user ?? null;
-    }
-
-    async findByVerificationToken(
-        tokenHash: string, 
-        options?: { withProfile?: boolean; }
-    ) {
-        if (options?.withProfile) {
-            const [result] = await this.db
-            .select()
-            .from(users)
-            .leftJoin(
-                profiles,
-                and(
-                eq(profiles.userId, users.id),
-                isNull(profiles.deletedAt),
-                ),
-            )
-            .where(
-                and(
-                    eq(users.verificationTokenHash, tokenHash),
-                    isNull(users.deletedAt),
-                ),
-            )
-            .limit(1);
-
-            if (!result) {
-                return null;
-            }
-
-            const user = {
-                ...result.users,
-                profile: result.profiles
-            }
-
-            return user;
-        }
-
-        const [user] = await this.db
-            .select()
-            .from(users)
-            .where(
-            and(
-                eq(
-                users.verificationTokenHash,
-                tokenHash,
-                ),
-                isNull(users.deletedAt),
-            ),
-            )
-            .limit(1);
 
         return user ?? null;
     }

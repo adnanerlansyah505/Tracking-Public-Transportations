@@ -27,9 +27,6 @@ export class UserSerializer {
   @Exclude()
   deletedAt!: Date | null;
 
-  @Exclude()
-  rememberToken!: string | null;
-
   constructor(partial: Partial<UserSerializer>) {
     Object.assign(this, partial);
   }

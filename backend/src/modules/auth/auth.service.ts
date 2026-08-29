@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { DB } from "../../database/database.module";
-import type { DbClient } from "../../database/database.module";
+import type { DbClient, DbTransaction } from "../../database/database.module";
 import { UserRepository } from "../users/users.repository";
 import { RegisterDTO } from "./dto/register.dto";
 import * as bcrypt from 'bcrypt';
@@ -10,6 +10,7 @@ import { JwtService } from "@nestjs/jwt";
 import { ProfileRepository } from "../profiles/profiles.repository";
 import { createHash, randomBytes } from "node:crypto";
 import { EmailService } from "../../common/email/email.service";
+import { AuthRepository, type AuthTokenType } from "./auth.repository";
 
 @Injectable()
 export class AuthService {
@@ -19,30 +20,26 @@ export class AuthService {
         @Inject(DB) private db: DbClient,
         private userRepository: UserRepository,
         private profileRepository: ProfileRepository,
+        private authRepository: AuthRepository,
         private jwtService: JwtService,
         private emailService: EmailService,
     ) {}
 
     async register(dto: RegisterDTO) {
         const existing = await this.userRepository.findByEmail(dto.email, { withProfile: true });
-        
+
         if (existing) throw new ConflictException('Email is already registered');
 
         const passwordHash = await bcrypt.hash(dto.password, 12);
 
-        const { token, tokenHash, expiresAt, } = this.generateVerificationToken();
-                
         const result = await this.db.transaction(async (tx) => {
             const user = await this.userRepository.create(
                 {
                     email: dto.email,
                     passwordHash,
-
-                    verificationTokenHash: tokenHash,
-                    verificationTokenExpiresAt: expiresAt
                 },
-                tx
-            )
+                tx,
+            );
 
             const profile = await this.profileRepository.create({
                 userId: user.id,
@@ -51,18 +48,22 @@ export class AuthService {
                 country: dto.country,
                 birthDate: dto.birthDate,
                 gender: dto.gender as "male" | "female" | undefined,
-            }, tx)
+            }, tx);
+
+            const { token, expiresAt } = await this.createAuthToken(tx, user.id, 'email_verification', 24 * 60 * 60 * 1000);
 
             return {
                 user,
-                profile
-            }
-        })
-        
+                profile,
+                token,
+                expiresAt,
+            };
+        });
+
         await this.sendVerificationEmail(
             result.user,
-            token,
-            expiresAt
+            result.token,
+            result.expiresAt,
         );
 
         return {
@@ -70,10 +71,10 @@ export class AuthService {
             status: true,
             data: {
                 user: this.sanitizeUser(result.user),
-                profile: result.profile
+                profile: result.profile,
             },
-        }
-    }    
+        };
+    }
 
     async login(dto: LoginDTO) {
         const user = await this.userRepository.findByEmail(dto.email);
@@ -88,108 +89,153 @@ export class AuthService {
         return this.sanitizeUser(user);
     }
 
+    async loginWithGoogle(profile: {
+        email?: string;
+        fullName?: string;
+        avatar?: string;
+        provider: string;
+        providerId: string;
+    }) {
+        const email = profile.email;
+
+        if (!email) {
+            throw new UnauthorizedException('Google profile email is required.');
+        }
+
+        const existingUser = await this.userRepository.findByEmail(email, { withProfile: true });
+
+        if (existingUser) {
+            return this.session(existingUser);
+        }
+
+        const result = await this.db.transaction(async (tx) => {
+            const user = await this.userRepository.create(
+                {
+                    email,
+                    passwordHash: await bcrypt.hash(randomBytes(32).toString('hex'), 12),
+                    emailVerifiedAt: new Date(),
+                },
+                tx,
+            );
+
+            await this.profileRepository.create(
+                {
+                    userId: user.id,
+                    fullName: profile.fullName ?? 'Google User',
+                    city: 'Not specified',
+                    country: 'Not specified',
+                    birthDate: new Date().toISOString().slice(0, 10),
+                    photo: profile.avatar,
+                    gender: undefined,
+                },
+                tx,
+            );
+
+            return user;
+        });
+
+        const user = await this.userRepository.findById(result.id, { withProfile: true });
+
+        if (!user) {
+            throw new UnauthorizedException('Unable to create Google user session.');
+        }
+
+        return this.session(user);
+    }
+
     async verifyEmail(token: string) {
         if (!token) throw new BadRequestException("Verification token is required");
 
-        const tokenHash = this.hashToken(token);
+        const authToken = await this.authRepository.findValidByTokenHash(this.hashToken(token), 'email_verification');
 
-        const user = await this.userRepository.findByVerificationToken(tokenHash);
+        if (!authToken) throw new BadRequestException("Invalid verification token.")
 
-        if (!user) throw new BadRequestException("Invalid verification token.")
-        
-        if (user.emailVerifiedAt) throw new BadRequestException({ code: "email_already_verified", message: "Email address is already verified" });
+        const user = await this.userRepository.findById(authToken.userId, { withProfile: true });
 
-        if (
-            !user.verificationTokenExpiresAt ||
-            user.verificationTokenExpiresAt <
-            new Date()
-        ) {
-            throw new BadRequestException({
-            code: 'verification_token_expired',
-            message:
-                'Verification token has expired.',
-            });
+        if (!user) {
+            throw new BadRequestException("Invalid verification token.");
         }
 
-        // Mark email as verified
-        const verifiedUser = await this.userRepository.update(
-            user.id,
-            {
-                emailVerifiedAt: new Date(),
+        if (user.emailVerifiedAt) throw new BadRequestException({ code: "email_already_verified", message: "Email address is already verified" });
 
-                verificationTokenHash: null,
-                verificationTokenExpiresAt: null
-            }
-        )
+        await this.db.transaction(async (tx) => {
+            await this.userRepository.update(
+                user.id,
+                {
+                    emailVerifiedAt: new Date(),
+                },
+                tx,
+            );
+
+            await this.authRepository.markUsed(authToken.id, new Date(), tx);
+        });
 
         return {
             status: true,
-            message:
-            'Email address verified successfully.',
+            message: 'Email address verified successfully.',
             data: {
-                user: this.sanitizeUser(verifiedUser ?? user)
+                user: this.sanitizeUser({ ...user, emailVerifiedAt: new Date() })
             }
         };
-
     }
 
     async resendVerificationEmail(email: string) {
         const user = await this.userRepository.findByEmail(email, { withProfile: true });
 
         if (!user) throw new NotFoundException("Email is not exist, please enter a valid email.");
-        
+
         if (user.emailVerifiedAt) throw new BadRequestException({ code: "email_already_verified", message: "Email address is already verified" });
 
-        const { token, tokenHash, expiresAt } = this.generateVerificationToken();
+        await this.db.transaction(async (tx) => {
+            await this.authRepository.invalidateActiveTokensForUser(user.id, 'email_verification', tx);
 
-        await this.userRepository.update(
-            user.id,
-            {
-                verificationTokenHash: tokenHash,
-                verificationTokenExpiresAt: expiresAt,
-            },
-        );
-
-        await this.sendVerificationEmail(
-            user,
-            token,
-            expiresAt
-        );
+            const { token, expiresAt } = await this.createAuthToken(tx, user.id, 'email_verification', 24 * 60 * 60 * 1000);
+            await this.sendVerificationEmail(user, token, expiresAt);
+        });
 
         return {
             status: true,
             message: "Verification email has been sent.",
-            data: null
-        }
+            data: null,
+        };
     }
 
     private async sendVerificationEmail(user: any, token: string, expiresAt: Date) {
-        const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:4000'; 
-        const verificationUrl = `${frontendUrl}/verify-email?token=${encodeURIComponent(token)}`; 
-        
+        const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:4000';
+        const verificationUrl = `${frontendUrl}/verify-email?token=${encodeURIComponent(token)}`;
+
         await this.emailService.sendVerificationEmail(user.email, { verificationUrl, recipientName: user.profile?.fullName, expiresIn: expiresAt })
-        
-        this.logger.log( `Verification email generated for ${user.email}`, ); 
-        this.logger.debug( `Verification URL: ${verificationUrl}`, );
+
+        this.logger.log(`Verification email generated for ${user.email}`);
+        this.logger.debug(`Verification URL: ${verificationUrl}`);
     }
 
-    private generateVerificationToken() {
-        // Token that will be sent to the user
+    private async createAuthToken(
+        tx: DbTransaction,
+        userId: string,
+        type: AuthTokenType,
+        ttlMs: number,
+    ) {
         const token = randomBytes(32).toString('hex');
-
-        // Only the has is stored in the database
         const tokenHash = this.hashToken(token);
+        const expiresAt = new Date(Date.now() + ttlMs);
 
-        // Token is valid for 24 Hours
-        const expiresAt = new Date(
-            Date.now() + 24 * 60 * 60 * 1000
-        )
+        const authToken = await this.authRepository.create(
+            {
+                userId,
+                type,
+                tokenHash,
+                expiresAt,
+            },
+            tx,
+        );
 
         return {
             token,
             tokenHash,
             expiresAt,
-        }
+            authToken,
+        };
     }
 
     private session(user: User) {
@@ -206,9 +252,6 @@ export class AuthService {
     private sanitizeUser(user: User) {
         const {
             passwordHash,
-            verificationTokenHash,
-            verificationTokenExpiresAt,
-            rememberToken,
             ...safeUser
         } = user;
 
@@ -218,6 +261,4 @@ export class AuthService {
     private hashToken(token: string) {
         return createHash('sha256').update(token).digest('hex');
     }
-
-    
 }
