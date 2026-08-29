@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { ConfigService } from '@nestjs/config';
 import { DB } from "../../database/database.module";
 import type { DbClient, DbTransaction } from "../../database/database.module";
 import { UserRepository } from "../users/users.repository";
@@ -23,6 +24,7 @@ export class AuthService {
         private authRepository: AuthRepository,
         private jwtService: JwtService,
         private emailService: EmailService,
+        private config: ConfigService,
     ) {}
 
     async register(dto: RegisterDTO) {
@@ -50,7 +52,7 @@ export class AuthService {
                 gender: dto.gender as "male" | "female" | undefined,
             }, tx);
 
-            const { token, expiresAt } = await this.createAuthToken(tx, user.id, 'email_verification', 24 * 60 * 60 * 1000);
+            const { token, expiresAt } = await this.createAuthToken(user.id, 'email_verification', 24 * 60 * 60 * 1000, tx);
 
             return {
                 user,
@@ -80,7 +82,7 @@ export class AuthService {
         const user = await this.userRepository.findByEmail(dto.email);
         if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) throw new UnauthorizedException("Invalid email or password")
         if (!user.emailVerifiedAt) throw new UnauthorizedException('Please verify your email address before logging in.');
-        return this.session(user)
+        return this.createSession(user)
     }
 
     async me(identifier: string) {
@@ -105,7 +107,7 @@ export class AuthService {
         const existingUser = await this.userRepository.findByEmail(email, { withProfile: true });
 
         if (existingUser) {
-            return this.session(existingUser);
+            return this.createSession(existingUser);
         }
 
         const result = await this.db.transaction(async (tx) => {
@@ -140,7 +142,38 @@ export class AuthService {
             throw new UnauthorizedException('Unable to create Google user session.');
         }
 
-        return this.session(user);
+        return this.createSession(user);
+    }
+
+    async refreshSession(refreshToken: string) {
+        if (!refreshToken) {
+            throw new UnauthorizedException('Refresh token is required.');
+        }
+
+        const token = await this.authRepository.consumeValidTokenHash(
+            this.hashToken(refreshToken),
+            'refresh_token',
+        );
+
+        if (!token) {
+            throw new UnauthorizedException('Refresh token is invalid or expired.');
+        }
+
+        const user = await this.userRepository.find(token.userId);
+        if (!user) {
+            throw new UnauthorizedException('User is not found.');
+        }
+
+        return this.createSession(user);
+    }
+
+    async logout(refreshToken?: string) {
+        if (refreshToken) {
+            await this.authRepository.consumeValidTokenHash(
+                this.hashToken(refreshToken),
+                'refresh_token',
+            );
+        }
     }
 
     async verifyEmail(token: string) {
@@ -189,7 +222,7 @@ export class AuthService {
         await this.db.transaction(async (tx) => {
             await this.authRepository.invalidateActiveTokensForUser(user.id, 'email_verification', tx);
 
-            const { token, expiresAt } = await this.createAuthToken(tx, user.id, 'email_verification', 24 * 60 * 60 * 1000);
+            const { token, expiresAt } = await this.createAuthToken(user.id, 'email_verification', 24 * 60 * 60 * 1000, tx);
             await this.sendVerificationEmail(user, token, expiresAt);
         });
 
@@ -211,10 +244,10 @@ export class AuthService {
     }
 
     private async createAuthToken(
-        tx: DbTransaction,
         userId: string,
         type: AuthTokenType,
         ttlMs: number,
+        tx?: DbTransaction,
     ) {
         const token = randomBytes(32).toString('hex');
         const tokenHash = this.hashToken(token);
@@ -238,15 +271,27 @@ export class AuthService {
         };
     }
 
-    private session(user: User) {
+    private async createSession(user: User) {
+        const refreshTokenTtlDays = Number(this.config.get('REFRESH_TOKEN_TTL_DAYS', '30'));
+        const refreshTokenTtlMs = (Number.isFinite(refreshTokenTtlDays) && refreshTokenTtlDays > 0
+            ? refreshTokenTtlDays
+            : 30) * 24 * 60 * 60 * 1000;
+        const refreshToken = await this.createAuthToken(
+            user.id,
+            'refresh_token',
+            refreshTokenTtlMs,
+        );
+
         return {
             accessToken: this.jwtService.sign({
                 sub: user.id,
                 email: user.email,
                 role: user.role,
             }),
-            user: this.sanitizeUser(user)
-        }
+            user: this.sanitizeUser(user),
+            refreshToken: refreshToken.token,
+            refreshTokenExpiresAt: refreshToken.expiresAt,
+        };
     }
 
     private sanitizeUser(user: User) {

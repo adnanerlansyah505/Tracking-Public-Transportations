@@ -4,7 +4,7 @@ import { DB } from "../../database/database.module";
 import type { DbClient, DbTransaction } from "../../database/database.module";
 import { authTokens } from "../../database/schema";
 
-export type AuthTokenType = 'email_verification' | 'password_reset';
+export type AuthTokenType = 'email_verification' | 'password_reset' | 'refresh_token';
 
 @Injectable()
 export class AuthRepository {
@@ -74,6 +74,25 @@ export class AuthRepository {
         ),
       )
       .limit(1);
+
+    return token ?? null;
+  }
+
+  /** Atomically consumes a token so a refresh token cannot be used twice. */
+  async consumeValidTokenHash(tokenHash: string, type: AuthTokenType, tx?: DbTransaction) {
+    const client = tx ?? this.db;
+    const [token] = await client
+      .update(authTokens)
+      .set({ usedAt: new Date() })
+      .where(
+        and(
+          eq(authTokens.tokenHash, tokenHash),
+          eq(authTokens.type, type),
+          isNull(authTokens.usedAt),
+          gte(authTokens.expiresAt, new Date()),
+        ),
+      )
+      .returning();
 
     return token ?? null;
   }
