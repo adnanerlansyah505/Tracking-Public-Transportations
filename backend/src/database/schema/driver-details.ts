@@ -18,6 +18,7 @@ export const driverDetails = pgTable('driver_details', {
   activatedAt: timestamp('activated_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  deletedAt: timestamp('deleted_at'),
 });
 
 export type DriverDetail = typeof driverDetails.$inferSelect;

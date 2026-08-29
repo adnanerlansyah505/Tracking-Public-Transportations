@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { eq, or } from 'drizzle-orm';
+import { count, eq, isNull, or } from 'drizzle-orm';
 import { DB } from '../../database/database.module';
 import type { DbClient, DbTransaction } from '../../database/database.module';
 import { driverDetails } from '../../database/schema';
@@ -11,6 +11,29 @@ export class DriverRepository {
   async create(data: typeof driverDetails.$inferInsert, tx?: DbTransaction) {
     const [detail] = await (tx ?? this.db).insert(driverDetails).values(data).returning();
     return detail ?? null;
+  }
+
+  async findAll(page: number = 1, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize;
+    const where = isNull(driverDetails.deletedAt);
+
+    const [driverRows, totalDrivers] = await Promise.all([
+      this.db
+        .select()
+        .from(driverDetails)
+        .where(where)
+        .orderBy(driverDetails.createdAt)
+        .limit(pageSize)
+        .offset(offset),
+      this.db.select({ value: count() }).from(driverDetails).where(where)
+    ]);
+
+    const total = totalDrivers[0]?.value ?? 0;
+
+    return {
+      drivers: driverRows,
+      metadata: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) }
+    }
   }
 
   async findByUserId(userId: string) {

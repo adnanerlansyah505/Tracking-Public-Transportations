@@ -1,0 +1,1 @@
+ALTER TABLE "driver_details" ADD COLUMN "deleted_at" timestamp;
