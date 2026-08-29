@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, Logger, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from '@nestjs/config';
 import { DB } from "../../database/database.module";
 import type { DbClient, DbTransaction } from "../../database/database.module";
@@ -12,6 +12,18 @@ import { ProfileRepository } from "../profiles/profiles.repository";
 import { createHash, randomBytes } from "node:crypto";
 import { EmailService } from "../../common/email/email.service";
 import { AuthRepository, type AuthTokenType } from "./auth.repository";
+import { DriverRepository } from '../drivers/driver.repository';
+import { RegisterDriverDTO } from './dto/register-driver.dto';
+import { UserRole } from './decorators/roles.decorator';
+import { FileService } from '../../common/file/file.service';
+import { DOCUMENT_MIME_TYPES, MAX_DOCUMENT_SIZE, MAX_IMAGE_SIZE } from '../../common/file/file.constants';
+import { validateUploadFiles } from '../../common/file/file.validation';
+
+interface DriverRegistrationFiles {
+    registrationDocument?: Express.Multer.File;
+    operationPermit?: Express.Multer.File;
+    vehiclePhoto?: Express.Multer.File;
+}
 
 @Injectable()
 export class AuthService {
@@ -22,23 +34,31 @@ export class AuthService {
         private userRepository: UserRepository,
         private profileRepository: ProfileRepository,
         private authRepository: AuthRepository,
+        private driverRepository: DriverRepository,
         private jwtService: JwtService,
         private emailService: EmailService,
         private config: ConfigService,
+        private fileService: FileService,
     ) {}
 
     async register(dto: RegisterDTO) {
         const existing = await this.userRepository.findByEmail(dto.email, { withProfile: true });
 
         if (existing) throw new ConflictException('Email is already registered');
+        if (await this.userRepository.findByUsername(dto.username)) {
+            throw new ConflictException('Username is already registered');
+        }
 
         const passwordHash = await bcrypt.hash(dto.password, 12);
 
         const result = await this.db.transaction(async (tx) => {
             const user = await this.userRepository.create(
                 {
-                    email: dto.email,
+                    email: dto.email.toLowerCase(),
+                    username: dto.username.toLowerCase(),
                     passwordHash,
+                    role: UserRole.Passenger,
+                    status: 'active',
                 },
                 tx,
             );
@@ -48,6 +68,7 @@ export class AuthService {
                 fullName: dto.fullName,
                 city: dto.city,
                 country: dto.country,
+                phone: dto.phone,
                 birthDate: dto.birthDate,
                 gender: dto.gender as "male" | "female" | undefined,
             }, tx);
@@ -79,10 +100,111 @@ export class AuthService {
     }
 
     async login(dto: LoginDTO) {
-        const user = await this.userRepository.findByEmail(dto.email);
+        const user = await this.userRepository.findByLoginIdentifier(dto.identifier);
         if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) throw new UnauthorizedException("Invalid email or password")
-        if (!user.emailVerifiedAt) throw new UnauthorizedException('Please verify your email address before logging in.');
+        this.ensureAccountCanAuthenticate(user);
+        if (!user.emailVerifiedAt && user.role != 'admin') throw new UnauthorizedException('Please verify your email address before logging in.');
         return this.createSession(user)
+    }
+
+    async registerDriver(dto: RegisterDriverDTO, files: DriverRegistrationFiles) {
+        const existing = await this.userRepository.findByEmail(dto.email);
+        if (existing) throw new ConflictException('Email is already registered');
+        if (await this.userRepository.findByUsername(dto.username)) {
+            throw new ConflictException('Username is already registered');
+        }
+        if (await this.driverRepository.findByIdentityCardOrPlate(dto.identityCardNumber, dto.vehiclePlateNumber)) {
+            throw new ConflictException('Driver ID card or vehicle plate number is already registered');
+        }
+
+        validateUploadFiles({ ...files }, [
+            {
+                field: 'registrationDocument',
+                required: true,
+                maxSize: MAX_DOCUMENT_SIZE,
+                allowedMimeTypes: DOCUMENT_MIME_TYPES,
+                invalidMessage: 'Registration Document must be a PDF, JPG, PNG, or WEBP file no larger than 10 MB',
+            },
+            {
+                field: 'operationPermit',
+                required: true,
+                maxSize: MAX_DOCUMENT_SIZE,
+                allowedMimeTypes: DOCUMENT_MIME_TYPES,
+                invalidMessage: 'Operation Permit must be a PDF, JPG, PNG, or WEBP file no larger than 10 MB',
+            },
+            {
+                field: 'vehiclePhoto',
+                required: true,
+                maxSize: MAX_IMAGE_SIZE,
+                allowedMimeTypes: /^image\/(jpeg|png|webp)$/,
+                invalidMessage: 'Vehicle Photo must be a JPG, PNG, or WEBP image no larger than 5 MB',
+            },
+        ]);
+
+        const savedFiles: string[] = [];
+        let registrationCommitted = false;
+        try {
+            const [registrationDocument, operationPermit, vehiclePhoto] = await Promise.all([
+                this.fileService.save(files.registrationDocument!, 'driver-documents'),
+                this.fileService.save(files.operationPermit!, 'driver-documents'),
+                this.fileService.save(files.vehiclePhoto!, 'driver-vehicles'),
+            ]);
+            savedFiles.push(registrationDocument.path, operationPermit.path, vehiclePhoto.path);
+
+            const passwordHash = await bcrypt.hash(dto.password, 12);
+            const result = await this.db.transaction(async (tx) => {
+            const user = await this.userRepository.create({
+                email: dto.email.toLowerCase(),
+                username: dto.username.toLowerCase(),
+                passwordHash,
+                role: UserRole.Driver,
+                status: 'pending_activation',
+            }, tx);
+            if (!user) throw new BadRequestException('Unable to create driver account.');
+
+            const profile = await this.profileRepository.create({
+                userId: user.id,
+                fullName: dto.fullName,
+                city: dto.city,
+                country: dto.country,
+                phone: dto.phone,
+                birthDate: dto.birthDate,
+                gender: dto.gender as 'male' | 'female',
+            }, tx);
+            const driverDetail = await this.driverRepository.create({
+                userId: user.id,
+                identityCardNumber: dto.identityCardNumber,
+                vehiclePlateNumber: dto.vehiclePlateNumber,
+                routeCode: dto.routeCode,
+                vehicleManufactureYear: dto.vehicleManufactureYear,
+                startRoute: dto.startRoute,
+                endRoute: dto.endRoute,
+                passengerCapacity: dto.passengerCapacity,
+                registrationDocument: registrationDocument.path,
+                operationPermit: operationPermit.path,
+                vehiclePhoto: vehiclePhoto.path,
+            }, tx);
+            const verification = await this.createAuthToken(user.id, 'email_verification', 24 * 60 * 60 * 1000, tx);
+            return { user, profile, driverDetail, verification };
+            });
+            registrationCommitted = true;
+
+            await this.sendVerificationEmail(result.user, result.verification.token, result.verification.expiresAt);
+            return {
+                message: 'Driver registration submitted and awaiting admin activation.',
+                status: true,
+                data: {
+                    user: this.sanitizeUser(result.user),
+                    profile: result.profile,
+                    // driverApplicationStatus: 'pending_activation',
+                },
+            };
+        } catch (error) {
+            if (!registrationCommitted) {
+                await Promise.all(savedFiles.map((path) => this.fileService.delete(path)));
+            }
+            throw error;
+        }
     }
 
     async me(identifier: string) {
@@ -107,6 +229,7 @@ export class AuthService {
         const existingUser = await this.userRepository.findByEmail(email, { withProfile: true });
 
         if (existingUser) {
+            this.ensureAccountCanAuthenticate(existingUser);
             return this.createSession(existingUser);
         }
 
@@ -162,6 +285,11 @@ export class AuthService {
         const user = await this.userRepository.find(token.userId);
         if (!user) {
             throw new UnauthorizedException('User is not found.');
+        }
+
+        this.ensureAccountCanAuthenticate(user);
+        if (!user.emailVerifiedAt) {
+            throw new UnauthorizedException('Please verify your email address before logging in.');
         }
 
         return this.createSession(user);
@@ -293,6 +421,16 @@ export class AuthService {
             refreshTokenExpiresAt: refreshToken.expiresAt,
         };
     }
+
+    private ensureAccountCanAuthenticate(user: User) {
+        if (user.status === 'pending_activation' && user.role === UserRole.Driver) {
+            throw new ForbiddenException('Driver account is awaiting admin activation.');
+        }
+        if (user.status !== 'active') {
+            throw new ForbiddenException('This account is not active.');
+        }
+    }
+
 
     private sanitizeUser(user: User) {
         const {

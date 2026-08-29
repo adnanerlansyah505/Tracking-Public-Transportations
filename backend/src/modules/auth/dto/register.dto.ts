@@ -1,4 +1,5 @@
-import { IsDateString, IsEmail, IsEnum, IsNotEmpty, IsString, Matches, MinLength } from "class-validator";
+import { IsDateString, IsEmail, IsEnum, IsNotEmpty, IsString, Matches, MinLength, Validate } from "class-validator";
+import { MatchConstraint } from '../../../common/validators/match.validator';
 
 export class RegisterDTO {
     @IsNotEmpty({
@@ -29,6 +30,7 @@ export class RegisterDTO {
 
     @IsNotEmpty({
     })
+    @Validate(MatchConstraint, ['password'])
     confirmPassword!: string;
 
     @IsNotEmpty({
@@ -37,8 +39,6 @@ export class RegisterDTO {
     })
     city!: string;
 
-    @IsNotEmpty({
-    })
     @MinLength(2, {
         message: "Country must contain at least 2 characters"
     })

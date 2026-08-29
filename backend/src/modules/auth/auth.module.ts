@@ -12,10 +12,12 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { UsersModule } from '../users/users.module';
 import { ProfilesModule } from '../profiles/profiles.module';
 import { EmailModule } from '../../common/email/email.module';
+import { DriversModule } from '../drivers/drivers.module';
 
 @Module({
   imports: [
     UsersModule,
+    DriversModule,
     PassportModule,
     ProfilesModule,
     EmailModule,

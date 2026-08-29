@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Post, Query, Req, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Post, Query, Req, Res, UploadedFiles, UseGuards, UseInterceptors } from "@nestjs/common";
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import type { Request, Response } from 'express';
 import { AuthService } from "./auth.service";
 import { RegisterDTO } from "./dto/register.dto";
@@ -8,6 +9,7 @@ import { Throttle } from "@nestjs/throttler";
 import { ResendVerificationDTO } from "./dto/resend-verification.dto";
 import { CurrentUser } from './decorators/current-user.decorator';
 import { GoogleOAuthGuard } from './guards/google-oauth.guard';
+import { RegisterDriverDTO } from './dto/register-driver.dto';
 
 @Controller("auth")
 export class AuthController {
@@ -16,6 +18,29 @@ export class AuthController {
 
     @Throttle({ default: { limit: 3, ttl: 60000 } })
     @Public() @Post("register") register(@Body() dto: RegisterDTO) { return this.authService.register(dto) }
+
+    @Throttle({ default: { limit: 3, ttl: 60000 } })
+    @Public()
+    @Post('register/driver')
+    @UseInterceptors(FileFieldsInterceptor([
+        { name: 'registrationDocument', maxCount: 1 },
+        { name: 'operationPermit', maxCount: 1 },
+        { name: 'vehiclePhoto', maxCount: 1 },
+    ]))
+    registerDriver(
+        @Body() dto: RegisterDriverDTO,
+        @UploadedFiles() files: {
+            registrationDocument?: Express.Multer.File[];
+            operationPermit?: Express.Multer.File[];
+            vehiclePhoto?: Express.Multer.File[];
+        },
+    ) {
+        return this.authService.registerDriver(dto, {
+            registrationDocument: files?.registrationDocument?.[0],
+            operationPermit: files?.operationPermit?.[0],
+            vehiclePhoto: files?.vehiclePhoto?.[0],
+        });
+    }
 
     @Public()
     @Post("login")

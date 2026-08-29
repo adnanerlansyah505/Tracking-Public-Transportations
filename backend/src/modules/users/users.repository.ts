@@ -1,8 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { DB } from "../../database/database.module";
 import type { DbClient, DbTransaction } from "../../database/database.module";
-import { profiles, users } from "../../database/schema";
+import { driverDetails, profiles, users } from "../../database/schema";
 import { and, count, eq, isNull, or } from "drizzle-orm";
+import { UserRole } from '../auth/decorators/roles.decorator';
 
 @Injectable()
 export class UserRepository {
@@ -83,8 +84,6 @@ export class UserRepository {
             )
             .limit(1);
 
-        console.log(user);
-        
         return user ?? null;
     }
 
@@ -132,6 +131,38 @@ export class UserRepository {
             .limit(1);
 
         return user ?? null;
+    }
+
+    async findByUsername(username: string) {
+        const [user] = await this.db
+            .select()
+            .from(users)
+            .where(and(eq(users.username, username.toLowerCase()), isNull(users.deletedAt)))
+            .limit(1);
+
+        return user ?? null;
+    }
+
+    async findByLoginIdentifier(identifier: string) {
+        const rawIdentifier = identifier.trim();
+        const normalized = rawIdentifier.toLowerCase();
+        const [result] = await this.db
+            .select({ user: users })
+            .from(users)
+            .leftJoin(driverDetails, eq(driverDetails.userId, users.id))
+            .where(
+                and(
+                    isNull(users.deletedAt),
+                    or(
+                        eq(users.email, normalized),
+                        and(eq(users.role, UserRole.Passenger), eq(users.username, normalized)),
+                        eq(driverDetails.identityCardNumber, rawIdentifier),
+                    ),
+                ),
+            )
+            .limit(1);
+
+        return result?.user ?? null;
     }
 
     async findById(id: string, options?: { withProfile?: boolean; }) {

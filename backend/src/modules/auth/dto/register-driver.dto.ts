@@ -1,4 +1,5 @@
-import { IsInt, IsNotEmpty, IsOptional, IsString, Matches, Max, Min, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsInt, IsNotEmpty, IsOptional, IsString, Max, Min, MinLength } from 'class-validator';
 import { RegisterDTO } from './register.dto';
 
 /** Submitted after the driver registration form's vehicle-information step. */
@@ -18,6 +19,7 @@ export class RegisterDriverDTO extends RegisterDTO {
   routeCode?: string;
 
   @IsInt()
+  @Type(() => Number)
   @Min(1900)
   @Max(new Date().getFullYear() + 1)
   vehicleManufactureYear!: number;
@@ -31,19 +33,9 @@ export class RegisterDriverDTO extends RegisterDTO {
   endRoute!: string;
 
   @IsInt()
+  @Type(() => Number)
   @Min(1)
   @Max(500)
   passengerCapacity!: number;
 
-  @IsNotEmpty()
-  @IsString()
-  registrationDocument!: string;
-
-  @IsNotEmpty()
-  @IsString()
-  operationPermit!: string;
-
-  @IsNotEmpty()
-  @IsString()
-  vehiclePhoto!: string;
 }

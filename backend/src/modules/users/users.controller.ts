@@ -3,7 +3,9 @@ import {
   Controller,
   Delete,
   Get,
+  NotFoundException,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -66,7 +68,15 @@ export class UsersController {
   // PATCH /users/:id
   @Patch(':id')
   update(
-    @Param('id') id: string,
+    @Param(
+      'id',
+      new ParseUUIDPipe({
+        version: '4',
+        exceptionFactory: () =>
+          new NotFoundException('User is not found.'),
+      }),
+    )
+    id: string,
     @Body() dto: UpdateUserDTO,
   ) {
     return this.users.update(
@@ -78,7 +88,15 @@ export class UsersController {
   // DELETE /users/:id
   @Delete(':id')
   delete(
-    @Param('id') id: string,
+     @Param(
+      'id',
+      new ParseUUIDPipe({
+        version: '4',
+        exceptionFactory: () =>
+          new NotFoundException('User is not found.'),
+      }),
+    )
+    id: string,
   ) {
     return this.users.delete(id);
   }

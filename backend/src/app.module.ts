@@ -18,6 +18,7 @@ import { CsrfModule } from './modules/csrf/csrf.module';
 import { AppCacheModule } from './common/cache/cache.module';
 import { FileModule } from './common/file/file.module';
 import { EmailModule } from './common/email/email.module';
+import { DriversModule } from './modules/drivers/drivers.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { EmailModule } from './common/email/email.module';
     AuthModule,
     UsersModule,
     ProfilesModule,
+    DriversModule,
     CsrfModule,
     ThrottlerModule.forRoot([
       // {
