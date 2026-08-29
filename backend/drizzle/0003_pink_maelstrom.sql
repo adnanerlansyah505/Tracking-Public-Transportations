@@ -1,0 +1,1 @@
+ALTER TABLE "users" ALTER COLUMN "verification_token_hash" SET DATA TYPE varchar;

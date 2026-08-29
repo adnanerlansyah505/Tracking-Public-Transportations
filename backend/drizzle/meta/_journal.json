@@ -1,0 +1,48 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1784987121137,
+      "tag": "0000_rapid_celestials",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787578050132,
+      "tag": "0001_gorgeous_proudstar",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787944505366,
+      "tag": "0002_pink_kronos",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1787948232480,
+      "tag": "0003_pink_maelstrom",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1787964289621,
+      "tag": "0004_black_rogue",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1787964915512,
+      "tag": "0005_melted_guardian",
+      "breakpoints": true
+    }
+  ]
+}
