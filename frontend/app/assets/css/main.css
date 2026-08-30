@@ -42,6 +42,7 @@
   
   --ui-primary: var(--color-primary);
   --ui-secondary: var(--color-primary-strong);
+  --ui-text: var(var(--color-muted));
   --ui-success: var(--ui-color-success-500);
   --ui-info: var(--ui-color-info-500);
   --ui-warning: var(--ui-color-warning-500);
@@ -72,7 +73,7 @@ body {
 }
 
 a {
-  color: inherit;
+  /* color: inherit; */
   text-decoration: none;
 }
 

@@ -30,7 +30,7 @@ async function handleGoogleLogin() {
 <template>
   <div v-if="false" class="min-h-screen bg-slate-100 flex items-center justify-center px-4 py-12">
     <div class="w-full max-w-5xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-soft grid md:grid-cols-2">
-      <div class="bg-slate-900 p-10 text-white">
+      <!-- <div class="bg-slate-900 p-10 text-white">
         <div class="mb-10">
           <p class="text-sm uppercase tracking-[0.2em] text-blue-200">Public Transport Tracker</p>
           <h1 class="mt-4 text-4xl font-extrabold">Welcome back</h1>
@@ -44,7 +44,7 @@ async function handleGoogleLogin() {
             <li>• API-first frontend architecture</li>
           </ul>
         </div>
-      </div>
+      </div> -->
 
       <div class="p-8 md:p-12">
         <div class="mb-8">
@@ -61,7 +61,7 @@ async function handleGoogleLogin() {
             <UInput v-model="password" type="password" placeholder="••••••••" class="w-full" />
           </UFormGroup>
 
-          <UButton type="submit" class="w-full" :loading="isSubmitting" color="primary">
+          <UButton type="submit" class="w-full text-white" :loading="isSubmitting" color="primary">
             Sign in
           </UButton>
 
@@ -78,12 +78,12 @@ async function handleGoogleLogin() {
       <h1 class="mt-4 text-4xl font-bold tracking-tight text-slate-950 sm:text-6xl">Public transport, clearly connected.</h1>
       <p class="mt-6 max-w-xl text-lg leading-8 text-slate-600">AngkotTracker helps passengers and drivers stay connected to the routes that move their city.</p>
       <div class="mt-8 flex flex-wrap gap-3">
-        <UButton to="/login" size="lg">Sign in</UButton>
+        <UButton to="/login" size="lg" class="text-white">Sign in</UButton>
         <UButton to="/register" color="neutral" variant="outline" size="lg">Create passenger account</UButton>
       </div>
     </div>
     <div class="rounded-3xl bg-primary-700 p-8 text-white shadow-xl sm:p-12">
-      <span class="text-4xl">🚌</span>
+      <img src="@/assets/images/logo-white.png" alt="Logo PTA" width="52" class="object-cover">
       <h2 class="mt-6 text-2xl font-bold">A smoother trip starts here.</h2>
       <p class="mt-3 leading-7 text-primary-100">Manage your account, follow your transit system, and join a growing network of passengers and operators.</p>
     </div>

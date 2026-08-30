@@ -17,7 +17,7 @@ async function submit() {
   const cleanIdentifier = identifier.value.trim();
   const cleanPassword = password.value;
 
-  if (!cleanIdentifier || !cleanPassword) {
+if (!cleanIdentifier || !cleanPassword) {
     error.value = 'Enter your email or username and password.';
     return;
   }
@@ -29,7 +29,7 @@ async function submit() {
 
   submitting.value = true;
   try {
-    await auth.login({ identifier: cleanIdentifier, password: cleanPassword }, identifier.value);
+    await auth.login({ identifier: cleanIdentifier, password: cleanPassword }, accountType.value);
     await navigateTo('/dashboard');
   } catch (cause) {
     error.value = message(cause, 'Unable to sign in with those credentials.');

@@ -9,6 +9,28 @@ export interface User {
   createdAt?: string;
   updatedAt?: string;
   username?: string | null;
+  profile?: {
+    id: string;
+    fullName: string;
+    city: string;
+    country?: string | null;
+    phone?: string | null;
+    photo?: string | null;
+    address?: string | null;
+    gender?: 'male' | 'female' | null;
+    birthDate: string;
+  } | null;
+  driverDetails?: {
+    id: string;
+    identityCardNumber: string;
+    vehiclePlateNumber: string;
+    routeCode?: string | null;
+    vehicleManufactureYear: number;
+    startRoute: string;
+    endRoute: string;
+    passengerCapacity: number;
+    activatedAt?: string | null;
+  } | null;
 }
 
 export interface AuthSession {
