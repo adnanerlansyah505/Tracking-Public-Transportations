@@ -1,4 +1,4 @@
-const PUBLIC_PATHS = new Set(['/', '/login/google', '/verify-email']);
+const PUBLIC_PATHS = new Set(['/', '/login', '/login/google', '/register', '/register/driver', '/verify-email']);
 
 export default defineNuxtRouteMiddleware(async (to) => {
   if (PUBLIC_PATHS.has(to.path)) return;
@@ -10,11 +10,11 @@ export default defineNuxtRouteMiddleware(async (to) => {
       // Restore the short-lived access token from the HttpOnly refresh cookie.
       await auth.refreshSession();
     } catch {
-      return navigateTo('/');
+      return navigateTo('/login');
     }
   }
 
   if (!auth.isAuthenticated) {
-    return navigateTo('/');
+    return navigateTo('/login');
   }
 });

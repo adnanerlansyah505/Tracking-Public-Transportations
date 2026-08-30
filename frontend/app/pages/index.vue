@@ -1,5 +1,7 @@
 <script setup lang="ts">
-const email = ref('');
+definePageMeta({ layout: 'web' });
+
+const identifier = ref('');
 const password = ref('');
 const isSubmitting = ref(false);
 
@@ -8,8 +10,8 @@ async function handleLogin() {
 
   try {
     const authStore = useAuthStore();
-    await authStore.loginWithEmail({
-      email: email.value,
+    await authStore.login({
+      identifier: identifier.value,
       password: password.value,
     });
 
@@ -26,7 +28,7 @@ async function handleGoogleLogin() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-100 flex items-center justify-center px-4 py-12">
+  <div v-if="false" class="min-h-screen bg-slate-100 flex items-center justify-center px-4 py-12">
     <div class="w-full max-w-5xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-soft grid md:grid-cols-2">
       <div class="bg-slate-900 p-10 text-white">
         <div class="mb-10">
@@ -51,8 +53,8 @@ async function handleGoogleLogin() {
         </div>
 
         <form class="space-y-5" @submit.prevent="handleLogin">
-          <UFormGroup label="Email address">
-            <UInput v-model="email" type="email" placeholder="you@example.com" class="w-full" />
+          <UFormGroup label="Email, username, or driver ID card">
+            <UInput v-model="identifier" type="text" placeholder="you@example.com" class="w-full" />
           </UFormGroup>
 
           <UFormGroup label="Password">
@@ -70,4 +72,20 @@ async function handleGoogleLogin() {
       </div>
     </div>
   </div>
+  <section class="mx-auto grid max-w-6xl gap-12 px-6 py-20 lg:grid-cols-2 lg:items-center lg:py-32">
+    <div>
+      <p class="text-sm font-semibold uppercase tracking-[0.18em] text-primary-600">Precision transit management</p>
+      <h1 class="mt-4 text-4xl font-bold tracking-tight text-slate-950 sm:text-6xl">Public transport, clearly connected.</h1>
+      <p class="mt-6 max-w-xl text-lg leading-8 text-slate-600">AngkotTracker helps passengers and drivers stay connected to the routes that move their city.</p>
+      <div class="mt-8 flex flex-wrap gap-3">
+        <UButton to="/login" size="lg">Sign in</UButton>
+        <UButton to="/register" color="neutral" variant="outline" size="lg">Create passenger account</UButton>
+      </div>
+    </div>
+    <div class="rounded-3xl bg-primary-700 p-8 text-white shadow-xl sm:p-12">
+      <span class="text-4xl">🚌</span>
+      <h2 class="mt-6 text-2xl font-bold">A smoother trip starts here.</h2>
+      <p class="mt-3 leading-7 text-primary-100">Manage your account, follow your transit system, and join a growing network of passengers and operators.</p>
+    </div>
+  </section>
 </template>

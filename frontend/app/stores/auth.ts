@@ -44,9 +44,10 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null;
   }
 
-  async function loginWithEmail(payload: { email: string; password: string }) {
+  async function login(payload: { identifier: string; password: string }, loginType: string = 'passenger') {
     const { $api } = useNuxtApp();
-    const response = await $api<ApiResponse<AuthSession>>('/auth/login', {
+    const path = loginType == 'passenger' ? '/auth/login' : '/auth/login/driver';
+    const response = await $api<ApiResponse<AuthSession>>(path, {
       method: 'POST',
       body: payload,
     });
@@ -54,7 +55,7 @@ export const useAuthStore = defineStore('auth', () => {
     return response.data;
   }
 
-  async function register(payload: Record<string, unknown>) {
+  async function registerPassenger(payload: Record<string, unknown>) {
     const { $api } = useNuxtApp();
     const response = await $api<ApiResponse<unknown>>('/auth/register', {
       method: 'POST',
@@ -79,6 +80,23 @@ export const useAuthStore = defineStore('auth', () => {
     });
     setSession(response.data);
     return response.data;
+  }
+
+  async function registerDriver(payload: FormData) {
+    const { $api } = useNuxtApp();
+    const response = await $api<ApiResponse<unknown>>('/auth/register/driver', {
+      method: 'POST',
+      body: payload,
+    });
+    return response.data;
+  }
+
+  // Kept for existing passenger registration callers.
+  const register = registerPassenger;
+
+  // Backwards-compatible alias for existing passenger email forms.
+  async function loginWithEmail(payload: { email: string; password: string }) {
+    return login({ identifier: payload.email, password: payload.password });
   }
 
   async function logout() {
@@ -116,7 +134,10 @@ export const useAuthStore = defineStore('auth', () => {
     setSession,
     clearSession,
     loginWithEmail,
+    login,
     register,
+    registerPassenger,
+    registerDriver,
     fetchMe,
     refreshSession,
     logout,
