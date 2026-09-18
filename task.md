@@ -1,5 +1,10 @@
 # MVP Scope
 
+## Landing Page
+- Landing page information about the application such as hero section, about section, etc.
+- Routes page (like google map)
+- 
+
 ## Authentication
 - Login
 - Register (such as Full Name, Email, Password, Confirm Password, City, Country, Birth Date, Gender, etc.)

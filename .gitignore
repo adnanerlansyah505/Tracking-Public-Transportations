@@ -9,3 +9,5 @@ frontend/.nuxt/
 ./frontend/.output/
 /frontend/.output/
 frontend/.output/
+
+/backend/uploads

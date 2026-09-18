@@ -106,6 +106,15 @@ export class AuthService {
         if (!user.emailVerifiedAt && user.role != 'admin') throw new UnauthorizedException('Please verify your email address before logging in.');
         return this.createSession(user)
     }
+    
+    async loginDriver(dto: LoginDTO) {
+        const user = await this.userRepository.findByLoginIdentifier(dto.identifier);
+        if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) throw new UnauthorizedException("Invalid email or password")
+        this.ensureAccountCanAuthenticate(user);
+        if (!user.emailVerifiedAt && user.role != 'admin') throw new UnauthorizedException('Please verify your email address before logging in.');
+        if (['passenger', 'admin'].includes(user?.role)) throw new ForbiddenException("You can't login with this account.")
+        return this.createSession(user)
+    }
 
     async registerDriver(dto: RegisterDriverDTO, files: DriverRegistrationFiles) {
         const existing = await this.userRepository.findByEmail(dto.email);
@@ -208,9 +217,17 @@ export class AuthService {
     }
 
     async me(identifier: string) {
-        const user = await this.userRepository.find(identifier);
+        const user = await this.userRepository.findById(identifier, { withProfile: true });
         if (!user) throw new UnauthorizedException("User is not found");
-        return this.sanitizeUser(user);
+
+        const safeUser = this.sanitizeUser(user);
+        if (user.role !== UserRole.Driver) return safeUser;
+
+        const driverDetail = await this.driverRepository.findByUserId(user.id);
+        return {
+            ...safeUser,
+            driverDetails: driverDetail ? this.sanitizeDriverDetails(driverDetail) : null,
+        };
     }
 
     async loginWithGoogle(profile: {
@@ -432,13 +449,25 @@ export class AuthService {
     }
 
 
-    private sanitizeUser(user: User) {
+    private sanitizeUser<T extends User>(user: T) {
         const {
             passwordHash,
             ...safeUser
         } = user;
 
         return safeUser;
+    }
+
+    /** Do not expose uploaded registration evidence through the general session endpoint. */
+    private sanitizeDriverDetails(driverDetail: NonNullable<Awaited<ReturnType<DriverRepository['findByUserId']>>>) {
+        const {
+            registrationDocument,
+            operationPermit,
+            vehiclePhoto,
+            ...safeDriverDetails
+        } = driverDetail;
+
+        return safeDriverDetails;
     }
 
     private hashToken(token: string) {

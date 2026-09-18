@@ -51,6 +51,14 @@ export class AuthController {
     }
 
     @Public()
+    @Post("login/driver")
+    async loginDriver(@Body() dto: LoginDTO, @Res({ passthrough: true }) res: Response) {
+        const session = await this.authService.loginDriver(dto);
+        this.setRefreshToken(res, session.refreshToken, session.refreshTokenExpiresAt);
+        return this.accessSession(session);
+    }
+
+    @Public()
     @Post('refresh')
     async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
         const session = await this.authService.refreshSession(req.cookies?.refresh_token);

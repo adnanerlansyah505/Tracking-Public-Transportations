@@ -19,7 +19,7 @@ export function renderVerificationEmail(options: VerificationEmailTemplateOption
       ctaText: 'Verify email',
       ctaUrl: options.verificationUrl,
       fallbackUrl: options.verificationUrl,
-      footerText: 'You received this because an LMS account was created with this email address.',
+      footerText: 'You received this because an PTA account was created with this email address.',
     }),
     text: `${body}\n\nVerify email: ${options.verificationUrl}\n\nYou received this because an PTA account was created with this email address.`,
   };

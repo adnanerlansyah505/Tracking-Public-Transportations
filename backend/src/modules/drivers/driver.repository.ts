@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { count, eq, isNull, or } from 'drizzle-orm';
+import { and, count, eq, isNull, or } from 'drizzle-orm';
 import { DB } from '../../database/database.module';
 import type { DbClient, DbTransaction } from '../../database/database.module';
 import { driverDetails } from '../../database/schema';
@@ -37,7 +37,11 @@ export class DriverRepository {
   }
 
   async findByUserId(userId: string) {
-    const [detail] = await this.db.select().from(driverDetails).where(eq(driverDetails.userId, userId)).limit(1);
+    const [detail] = await this.db
+      .select()
+      .from(driverDetails)
+      .where(and(eq(driverDetails.userId, userId), isNull(driverDetails.deletedAt)))
+      .limit(1);
     return detail ?? null;
   }
 
