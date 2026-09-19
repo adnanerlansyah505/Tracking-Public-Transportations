@@ -30,15 +30,16 @@
     "@tiptap/starter-kit": "^3.30.5",
     "@tiptap/suggestion": "^3.30.5",
     "@tiptap/vue-3": "^3.30.5",
+    "@types/mapbox-gl": "^3.4.1",
+    "mapbox-gl": "^3.31.0",
     "nuxt": "^4.5.2",
     "pinia": "^4.0.3",
     "tailwindcss": "^4.3.3",
-    "typescript": "^7.0.2",
     "vite-tsconfig-paths": "^6.1.1",
-    "vue": "^3.5.41",
-    "vue-router": "^5.2.0"
+    "vue": "^3.5.41"
   },
   "devDependencies": {
-    "vue-tsc": "^3.3.11"
+    "typescript": "^5.7.3",
+    "vue-tsc": "^2.2.0"
   }
 }

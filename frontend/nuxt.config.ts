@@ -6,14 +6,24 @@ export default defineNuxtConfig({
 
   modules: ['@nuxt/ui', '@pinia/nuxt'],
 
-  pinia: {
-    storesDirs: ['./stores/**'],
+  // The interface is designed light-only, so keep Nuxt UI surfaces light even
+  // when the operating system prefers a dark theme.
+  colorMode: {
+    preference: 'light',
+    fallback: 'light',
   },
 
-  css: ['~/assets/css/main.css'],
+  pinia: {
+    storesDirs: ['./app/stores/**', './stores/**'],
+  },
+
+  css: [
+    'mapbox-gl/dist/mapbox-gl.css',
+    '~/assets/css/main.css',
+  ],
 
   devServer: {
-    port: 4000
+    port: 4000,
   },
 
   runtimeConfig: {
@@ -21,15 +31,16 @@ export default defineNuxtConfig({
       appName: 'Public Transport Tracker',
       appUrl: 'http://localhost:4000',
       apiBaseUrl: 'http://localhost:3000/api/v1',
+      mapboxToken: process.env.NUXT_PUBLIC_MAPBOX_TOKEN || process.env.MAPBOX_TOKEN || '',
     },
   },
 
   app: {
     head: {
-      title: 'Public Transport Tracker',
+      title: 'Real-Time Public Transport Tracking',
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'description', content: 'Public transportation tracking platform' },
+        { name: 'description', content: 'Live Angkot and public transportation tracking platform in Bandung' },
       ],
     },
   },
