@@ -17,3 +17,5 @@ frontend/.output/
 ./commandcode
 commandcode/
 /commandcode/
+.vercel
+.env*
