@@ -69,13 +69,9 @@ const mapStyles = [
   { label: 'Satellite', value: 'mapbox://styles/mapbox/satellite-streets-v12' },
 ];
 
-const FALLBACK_TOKEN = '';
-
 function getActiveToken(): string {
   if (customToken.value.trim()) return customToken.value.trim();
-  const tokenFromConfig = (config.public.mapboxToken as string) || '';
-  if (tokenFromConfig.trim()) return tokenFromConfig.trim();
-  return FALLBACK_TOKEN;
+  return ((config.public.mapboxToken as string) || '').trim();
 }
 
 function applyCustomToken() {
@@ -89,6 +85,13 @@ function initMap() {
   if (typeof window === 'undefined' || !mapContainer.value) return;
 
   const token = getActiveToken();
+
+  // No token means no tiles: show the setup banner instead of a broken map.
+  if (!token) {
+    tokenError.value = true;
+    return;
+  }
+
   mapboxgl.accessToken = token;
 
   if (mapInstance.value) {

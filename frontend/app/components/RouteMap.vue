@@ -41,12 +41,11 @@ const loaded = ref(false);
 const routeLoading = ref(false);
 const routeError = ref('');
 
-const FALLBACK_TOKEN = '';
 const ROUTE_SOURCE = 'route-source';
 const ROUTE_CASING = 'route-casing';
 const ROUTE_LINE = 'route-line';
 
-const token = computed(() => (config.public.mapboxToken as string) || FALLBACK_TOKEN);
+const token = computed(() => ((config.public.mapboxToken as string) || '').trim());
 
 let fromMarker: mapboxgl.Marker | null = null;
 let toMarker: mapboxgl.Marker | null = null;
@@ -75,7 +74,7 @@ function buildMarker(color: string, glyph: string, caption: string) {
 }
 
 function init() {
-  if (typeof window === 'undefined' || !container.value || mapInstance.value) return;
+  if (typeof window === 'undefined' || !container.value || mapInstance.value || !token.value) return;
 
   mapboxgl.accessToken = token.value;
 
@@ -272,6 +271,16 @@ watch([() => props.from, () => props.to], () => {
       ref="container"
       class="h-full w-full"
     />
+
+    <div
+      v-if="!token"
+      class="absolute inset-0 z-10 flex items-center justify-center p-6 text-center"
+    >
+      <p class="rounded-lg bg-white/95 px-3 py-2 text-xs font-semibold text-slate-700 shadow">
+        Peta belum aktif — isi <code class="font-mono">NUXT_PUBLIC_MAPBOX_TOKEN</code> pada berkas
+        <code class="font-mono">.env</code>.
+      </p>
+    </div>
 
     <div
       v-if="routeLoading"
