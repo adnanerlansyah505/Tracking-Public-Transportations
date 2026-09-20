@@ -1,10 +1,10 @@
-import { count, eq } from 'drizzle-orm';
+import { count, eq, inArray } from 'drizzle-orm';
 import bcrypt from 'bcrypt';
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { driverDetails, profiles, routes, users } from '../schema';
-import type { RouteStop } from '../schema';
 import { UserRole } from '../../modules/auth/decorators/roles.decorator';
+import { BANDUNG_ROUTES, RETIRED_ROUTE_CODES } from './routes.data';
 
 try {
   process.loadEnvFile();
@@ -20,120 +20,14 @@ const db = drizzle(pool);
 
 const BCRYPT_ROUNDS = 12;
 
+/** The trayek the seeded driver runs — one of the researched routes. */
+const DRIVER_ROUTE = { code: '05', start: 'Terminal Cicaheum', end: 'Terminal Ledeng' };
+
 const ACCOUNTS = {
   admin: { email: 'admin@angkot.test', username: 'admin', password: 'admin1234' },
   driver: { email: 'driver@angkot.test', username: 'driver', password: 'driver1234' },
   passenger: { email: 'passenger@angkot.test', username: 'passenger', password: 'passenger1234' },
 };
-
-/** The four Bandung routes from the frontend dummy data, ready to serve. */
-const ROUTES: Array<{
-  code: string;
-  name: string;
-  origin: string;
-  destination: string;
-  fare: string;
-  operatingHours: string;
-  color: string;
-  maxCapacity: number;
-  stops: RouteStop[];
-  path: [number, number][];
-}> = [
-  {
-    code: '01A',
-    name: 'Cicaheum - Ledeng',
-    origin: 'Terminal Cicaheum',
-    destination: 'Terminal Ledeng',
-    fare: 'Rp 6.000',
-    operatingHours: '05:00 - 21:00',
-    color: '#059669',
-    maxCapacity: 12,
-    stops: [
-      { id: 's-01-1', name: 'Terminal Cicaheum', coordinates: [107.6575, -6.9031], zone: 'East' },
-      { id: 's-01-2', name: 'Gasibu / Gedung Sate', coordinates: [107.6186, -6.9004], zone: 'Central' },
-      { id: 's-01-3', name: 'Simpang Dago', coordinates: [107.6162, -6.8858], zone: 'North' },
-      { id: 's-01-4', name: 'Terminal Ledeng', coordinates: [107.5962, -6.8586], zone: 'North' },
-    ],
-    path: [
-      [107.6575, -6.9031],
-      [107.6412, -6.9095],
-      [107.6253, -6.9015],
-      [107.6186, -6.9004],
-      [107.6162, -6.8858],
-      [107.6012, -6.8715],
-      [107.5962, -6.8586],
-    ],
-  },
-  {
-    code: '05',
-    name: 'Dago - Kebon Kalapa',
-    origin: 'Terminal Dago',
-    destination: 'Kebon Kalapa',
-    fare: 'Rp 5.000',
-    operatingHours: '05:30 - 22:00',
-    color: '#2563eb',
-    maxCapacity: 12,
-    stops: [
-      { id: 's-02-1', name: 'Terminal Dago', coordinates: [107.6162, -6.8722], zone: 'North' },
-      { id: 's-02-2', name: 'Dipatiukur (UNPAD)', coordinates: [107.6186, -6.8927], zone: 'North' },
-      { id: 's-02-3', name: 'Alun-Alun Bandung', coordinates: [107.6098, -6.9218], zone: 'Central' },
-      { id: 's-02-4', name: 'Kebon Kalapa', coordinates: [107.6053, -6.9283], zone: 'South' },
-    ],
-    path: [
-      [107.6162, -6.8722],
-      [107.6186, -6.8927],
-      [107.6105, -6.9085],
-      [107.6098, -6.9218],
-      [107.6053, -6.9283],
-    ],
-  },
-  {
-    code: '08',
-    name: 'Cicaheum - Ciroyom',
-    origin: 'Terminal Cicaheum',
-    destination: 'Stasiun Ciroyom',
-    fare: 'Rp 6.000',
-    operatingHours: '05:00 - 20:30',
-    color: '#d97706',
-    maxCapacity: 12,
-    stops: [
-      { id: 's-03-1', name: 'Terminal Cicaheum', coordinates: [107.6575, -6.9031], zone: 'East' },
-      { id: 's-03-2', name: 'Stasiun Bandung', coordinates: [107.6025, -6.9142], zone: 'Central' },
-      { id: 's-03-3', name: 'Stasiun Ciroyom', coordinates: [107.5898, -6.9125], zone: 'West' },
-    ],
-    path: [
-      [107.6575, -6.9031],
-      [107.6385, -6.9158],
-      [107.6128, -6.9174],
-      [107.6025, -6.9142],
-      [107.5898, -6.9125],
-    ],
-  },
-  {
-    code: '32',
-    name: 'Elang - Gedebage',
-    origin: 'Terminal Elang',
-    destination: 'Terminal Gedebage',
-    fare: 'Rp 6.000',
-    operatingHours: '05:30 - 21:00',
-    color: '#8b5cf6',
-    maxCapacity: 14,
-    stops: [
-      { id: 's-04-1', name: 'Terminal Elang', coordinates: [107.5712, -6.9185], zone: 'West' },
-      { id: 's-04-2', name: 'Alun-Alun Bandung', coordinates: [107.6098, -6.9218], zone: 'Central' },
-      { id: 's-04-3', name: 'Soekarno-Hatta MTC', coordinates: [107.6342, -6.9458], zone: 'South' },
-      { id: 's-04-4', name: 'Terminal Gedebage', coordinates: [107.6925, -6.9532], zone: 'East' },
-    ],
-    path: [
-      [107.5712, -6.9185],
-      [107.5921, -6.9232],
-      [107.6098, -6.9218],
-      [107.6342, -6.9458],
-      [107.6658, -6.9512],
-      [107.6925, -6.9532],
-    ],
-  },
-];
 
 async function upsertUser(
   account: { email: string; username: string; password: string },
@@ -178,26 +72,55 @@ async function main() {
       userId: driver.id,
       identityCardNumber: '3273010101920001',
       vehiclePlateNumber: 'D 1984 AB',
-      routeCode: '01A',
+      routeCode: DRIVER_ROUTE.code,
       vehicleManufactureYear: 2018,
-      startRoute: 'Terminal Cicaheum',
-      endRoute: 'Terminal Ledeng',
+      startRoute: DRIVER_ROUTE.start,
+      endRoute: DRIVER_ROUTE.end,
       passengerCapacity: 12,
       activatedAt: new Date(),
     })
     .onConflictDoNothing({ target: driverDetails.userId });
 
-  for (const route of ROUTES) {
+  // Earlier seeds assigned the driver to 01A, a route the research replaced.
+  await db
+    .update(driverDetails)
+    .set({ routeCode: DRIVER_ROUTE.code, startRoute: DRIVER_ROUTE.start, endRoute: DRIVER_ROUTE.end })
+    .where(eq(driverDetails.routeCode, '01A'));
+
+  for (const route of BANDUNG_ROUTES) {
+    const values = {
+      ...route,
+      status: 'approved' as const,
+      reviewedBy: admin.id,
+      reviewedAt: new Date(),
+    };
+
     await db
       .insert(routes)
-      .values({
-        ...route,
-        status: 'approved',
-        reviewedBy: admin.id,
-        reviewedAt: new Date(),
-      })
-      .onConflictDoNothing({ target: routes.code });
+      .values(values)
+      .onConflictDoUpdate({
+        target: routes.code,
+        set: {
+          name: route.name,
+          origin: route.origin,
+          destination: route.destination,
+          city: route.city,
+          fare: route.fare,
+          operatingHours: route.operatingHours,
+          color: route.color,
+          maxCapacity: route.maxCapacity,
+          stops: route.stops,
+          path: route.path,
+          status: 'approved',
+          reviewedBy: admin.id,
+          reviewedAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
   }
+
+  // Dummy trayek from earlier seeds are absent from the research, so drop them.
+  await db.delete(routes).where(inArray(routes.code, RETIRED_ROUTE_CODES));
 
   const [routeTotal] = await db.select({ value: count() }).from(routes);
 

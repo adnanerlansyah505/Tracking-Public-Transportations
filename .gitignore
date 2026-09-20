@@ -11,3 +11,9 @@ frontend/.nuxt/
 frontend/.output/
 
 /backend/uploads
+
+/.commandcode/
+.commandcode/
+./commandcode
+commandcode/
+/commandcode/

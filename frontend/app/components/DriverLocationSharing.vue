@@ -70,6 +70,9 @@ function activate() {
             color="neutral"
             variant="ghost"
             @click="promptOpen = false"
+            :ui="{
+              base: 'text-black hover:text-black'
+            }"
           >
             Nanti
           </UButton>
