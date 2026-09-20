@@ -11,6 +11,7 @@ export interface TransitRoute {
   name: string;
   origin: string;
   destination: string;
+  city?: string;
   fare: string;
   operatingHours: string;
   color: string;
@@ -53,6 +54,7 @@ export interface RoutePayload {
   name: string;
   origin: string;
   destination: string;
+  city?: string;
   fare: string;
   operatingHours: string;
   color: string;

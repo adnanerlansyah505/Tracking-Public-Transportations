@@ -20,6 +20,7 @@ interface RouteListResult {
 interface ListParams {
   status?: RouteStatus;
   search?: string;
+  city?: string;
   page?: number;
   limit?: number;
 }
@@ -37,6 +38,7 @@ export const useRoutesStore = defineStore('routes', () => {
       limit: params?.limit ?? 50,
       status: params?.status,
       search: params?.search || undefined,
+      city: params?.city || undefined,
     };
   }
 

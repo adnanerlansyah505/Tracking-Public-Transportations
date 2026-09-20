@@ -15,6 +15,8 @@ const props = withDefaults(
     isSimulating?: boolean;
     mapHeight?: string;
     routes?: TransitRoute[];
+    /** When provided, these positions are rendered as-is instead of simulating. */
+    vehicles?: AngkotVehicle[];
   }>(),
   {
     selectedVehicleId: null,
@@ -44,8 +46,15 @@ let simulationTimer: ReturnType<typeof setInterval> | null = null;
 
 const vehicles = ref<AngkotVehicle[]>([]);
 
-/** Derive a fresh set of simulated vehicles from the routes currently shown. */
+/** Live mode draws the positions we were handed; otherwise we animate a simulation. */
+const hasLiveVehicles = computed(() => props.vehicles !== undefined);
+
 function seedVehicles() {
+  if (hasLiveVehicles.value) {
+    vehicles.value = props.vehicles ?? [];
+    return;
+  }
+
   vehicles.value = buildSimulatedVehicles(props.routes);
   emit('update:vehicles', vehicles.value);
 }
@@ -273,7 +282,8 @@ function renderStopMarkers(map: mapboxgl.Map) {
 }
 
 function createVehicleElement(vehicle: AngkotVehicle): HTMLElement {
-  const route = props.routes.find((r) => r.id === vehicle.routeId);
+  const route = props.routes.find((r) => r.id === vehicle.routeId)
+    ?? props.routes.find((r) => r.code === vehicle.angkotCode);
   const color = route?.color || '#123d8d';
 
   const wrapper = document.createElement('div');
@@ -440,6 +450,16 @@ watch(
 );
 
 watch(
+  () => props.vehicles,
+  () => {
+    seedVehicles();
+
+    const map = mapInstance.value;
+    if (map && mapLoaded.value) renderVehicleMarkers(map);
+  }
+);
+
+watch(
   () => props.activeRouteId,
   (newRouteId) => {
     updateRouteStyles();
@@ -468,7 +488,7 @@ watch(
 onMounted(() => {
   initMap();
   seedVehicles();
-  if (props.isSimulating) {
+  if (props.isSimulating && !hasLiveVehicles.value) {
     startSimulation();
   }
 });
@@ -503,14 +523,15 @@ defineExpose({
       <!-- Live Indicator -->
       <div class="flex items-center gap-1.5 rounded-lg bg-slate-900/85 px-3 py-1.5 text-xs font-semibold text-white shadow-md backdrop-blur">
         <span class="relative flex h-2.5 w-2.5">
-          <span v-if="isSimulatingActive" class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-          <span class="relative inline-flex h-2.5 w-2.5 rounded-full" :class="isSimulatingActive ? 'bg-emerald-500' : 'bg-slate-400'"></span>
+          <span v-if="isSimulatingActive || hasLiveVehicles" class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex h-2.5 w-2.5 rounded-full" :class="isSimulatingActive || hasLiveVehicles ? 'bg-emerald-500' : 'bg-slate-400'"></span>
         </span>
-        <span>{{ isSimulatingActive ? 'Live Telemetry' : 'Simulation Paused' }}</span>
+        <span>{{ hasLiveVehicles ? 'Posisi Langsung' : (isSimulatingActive ? 'Live Telemetry' : 'Simulation Paused') }}</span>
       </div>
 
       <!-- Simulation Play/Pause -->
       <button
+        v-if="!hasLiveVehicles"
         type="button"
         @click="toggleSimulation"
         class="flex items-center gap-1 rounded-lg bg-white/90 px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow hover:bg-white backdrop-blur transition cursor-pointer"

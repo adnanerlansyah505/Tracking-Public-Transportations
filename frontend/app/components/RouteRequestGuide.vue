@@ -6,7 +6,7 @@ const DETAILS = [
   { label: 'Route name', example: 'Cicaheum - Ledeng' },
   { label: 'Origin terminal', example: 'Terminal Cicaheum' },
   { label: 'Destination terminal', example: 'Terminal Ledeng' },
-  { label: 'Fare', example: 'Rp 6.000' },
+  { label: 'Fare per-destination', example: 'Rp 6.000' },
   { label: 'Operating hours', example: '05:00 - 21:00' },
   { label: 'Maximum capacity', example: '12 passengers' },
 ];

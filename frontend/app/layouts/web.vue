@@ -11,13 +11,13 @@ const initials = computed(() => {
   return parts.map((part) => part.charAt(0)).join('').toUpperCase() || 'AK';
 });
 
-const roleLabel = computed(() =>
-  auth.user?.role ? `${auth.user.role.charAt(0).toUpperCase()}${auth.user.role.slice(1)} dashboard` : 'Dashboard',
-);
+// const roleLabel = computed(() =>
+//   auth.user?.role ? `${auth.user.role.charAt(0).toUpperCase()}${auth.user.role.slice(1)} dashboard` : 'Dashboard',
+// );
 
 const accountMenuItems = computed(() => [
   [
-    { label: roleLabel.value, icon: 'i-lucide-layout-dashboard', to: '/dashboard' },
+    { label: "Dashboard", icon: 'i-lucide-layout-dashboard', to: '/dashboard' },
     { label: 'Profile', icon: 'i-lucide-user-round', to: '/dashboard/profile' },
   ],
   [
@@ -61,9 +61,15 @@ async function signOut() {
 
         <!-- Right Action: account menu when signed in, otherwise sign-in CTA -->
         <div class="flex items-center gap-3">
+          <NotificationBell v-if="auth.isAuthenticated" />
+
           <UDropdownMenu
             v-if="auth.isAuthenticated"
             :items="accountMenuItems"
+            :ui="{
+              item: 'text-black',
+              content: 'min-w-[180px]',
+            }"
           >
             <button
               type="button"

@@ -112,7 +112,7 @@ async function confirmDelete() {
           v-if="role === 'driver'"
           icon="i-lucide-circle-help"
           color="neutral"
-          variant="soft"
+          variant="solid"
           @click="guideOpen = true"
           size="md"
         >

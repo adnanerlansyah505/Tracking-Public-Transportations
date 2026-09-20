@@ -1,32 +1,40 @@
 <script setup lang="ts">
-import type { TransitRoute, AngkotVehicle } from '~/data/transitData';
+import type { AngkotVehicle, TransitRoute } from '~/data/transitData';
+import type { ActiveDriver } from '~/stores/location';
 
 definePageMeta({ layout: 'web' });
 
 const routesStore = useRoutesStore();
+const location = useLocationStore();
+const auth = useAuthStore();
 const { message } = useApiError();
+
+const isDriver = computed(() => auth.user?.role === 'driver');
+
+const { city, coords, detecting, error: cityError, detect } = useCurrentCity();
+const cityName = computed(() => city.value?.name ?? null);
 
 const mapboxMapRef = ref<any>(null);
 const activeRouteId = ref<string | null>(null);
-const selectedVehicleId = ref<string | null>(null);
+const selectedDriverId = ref<string | null>(null);
 const searchQuery = ref('');
-const isSimulating = ref(true);
-
 const loading = ref(true);
 const error = ref('');
 
-// Routes come from the API; vehicles are simulated on top of those routes.
-const routes = computed(() => routesStore.routes);
-const vehicles = ref<AngkotVehicle[]>([]);
+let refreshTimer: ReturnType<typeof setInterval> | null = null;
 
+const routes = computed(() => routesStore.routes);
+const drivers = computed(() => location.activeDrivers);
 const hasRoutes = computed(() => routes.value.length > 0);
 
+/** Load the network for whichever city the visitor is standing in. */
 async function load() {
   loading.value = true;
   error.value = '';
 
   try {
-    await routesStore.fetchPublicRoutes({ limit: 100 });
+    await routesStore.fetchPublicRoutes({ limit: 100, city: cityName.value ?? undefined });
+    await refreshDrivers();
   } catch (cause) {
     error.value = message(cause, 'Kami tidak dapat memuat data trayek saat ini.');
   } finally {
@@ -34,14 +42,40 @@ async function load() {
   }
 }
 
-onMounted(load);
+function refreshDrivers() {
+  return location
+    .fetchActiveDrivers({
+      city: cityName.value,
+      latitude: coords.value?.latitude,
+      longitude: coords.value?.longitude,
+    })
+    .catch(() => undefined);
+}
 
-const quickFilters = computed(() => routes.value.slice(0, 4).map((route) => route.code));
+async function redetect() {
+  await detect(true);
+  await load();
+}
 
-const activeRoute = computed(() => {
-  if (!activeRouteId.value) return null;
-  return routes.value.find((route) => route.id === activeRouteId.value) ?? null;
+onMounted(() => {
+  // Find the visitor's city first, then load that city's network.
+  detect().then(load);
+
+  // Live positions refresh on a short interval so the map stays current.
+  refreshTimer = setInterval(refreshDrivers, 15000);
 });
+
+onBeforeUnmount(() => {
+  if (refreshTimer) clearInterval(refreshTimer);
+});
+
+const quickFilters = computed(() => routes.value.slice(0, 2).map((route) => route.name));
+
+const activeRoute = computed(() =>
+  activeRouteId.value ? routes.value.find((route) => route.id === activeRouteId.value) ?? null : null);
+
+const selectedDriver = computed(() =>
+  drivers.value.find((driver) => driver.userId === selectedDriverId.value) ?? null);
 
 const filteredRoutes = computed(() => {
   const query = searchQuery.value.trim().toLowerCase();
@@ -57,44 +91,40 @@ const filteredRoutes = computed(() => {
   );
 });
 
-const filteredVehicles = computed(() => {
-  let list = vehicles.value;
+const filteredDrivers = computed(() => {
+  let list = drivers.value;
 
-  if (activeRouteId.value) {
-    list = list.filter((vehicle) => vehicle.routeId === activeRouteId.value);
+  if (activeRoute.value) {
+    list = list.filter((driver) => driver.routeCode === activeRoute.value?.code);
   }
 
   const query = searchQuery.value.trim().toLowerCase();
   if (!query) return list;
 
-  return list.filter(
-    (vehicle) =>
-      vehicle.plateNumber.toLowerCase().includes(query) ||
-      vehicle.driverName.toLowerCase().includes(query) ||
-      vehicle.angkotCode.toLowerCase().includes(query) ||
-      vehicle.routeName.toLowerCase().includes(query),
-  );
+  return list.filter((driver) =>
+    [driver.plateNumber, driver.name, driver.routeCode]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(query)));
 });
 
-const selectedVehicle = computed(
-  () => vehicles.value.find((vehicle) => vehicle.id === selectedVehicleId.value) ?? null,
-);
-
-function routeColor(routeId: string) {
-  return routes.value.find((route) => route.id === routeId)?.color ?? '#123d8d';
+function driverColor(driver: ActiveDriver) {
+  return routes.value.find((route) => route.code === driver.routeCode)?.color ?? '#123d8d';
 }
 
-function handleVehiclesUpdate(next: AngkotVehicle[]) {
-  vehicles.value = next;
+function updatedAgo(timestamp: number) {
+  const seconds = Math.max(0, Math.round((Date.now() - timestamp) / 1000));
+  if (seconds < 60) return `${seconds} detik lalu`;
+
+  return `${Math.round(seconds / 60)} menit lalu`;
 }
 
 function handleSelectVehicle(vehicle: AngkotVehicle | null) {
-  selectedVehicleId.value = vehicle ? vehicle.id : null;
+  selectedDriverId.value = vehicle ? vehicle.id : null;
 }
 
 function handleSelectRoute(route: TransitRoute | null) {
   activeRouteId.value = route ? route.id : null;
-  selectedVehicleId.value = null;
+  selectedDriverId.value = null;
 }
 
 function toggleRouteFilter(routeId: string) {
@@ -102,33 +132,28 @@ function toggleRouteFilter(routeId: string) {
     activeRouteId.value = null;
   } else {
     activeRouteId.value = routeId;
-    selectedVehicleId.value = null;
+    selectedDriverId.value = null;
   }
 }
 
-function focusVehicle(vehicle: AngkotVehicle) {
-  selectedVehicleId.value = vehicle.id;
-  mapboxMapRef.value?.flyToVehicle(vehicle);
+function focusDriver(driver: ActiveDriver) {
+  selectedDriverId.value = driver.userId;
+
+  const vehicle = location.mapVehicles.find((entry) => entry.id === driver.userId);
+  if (vehicle) mapboxMapRef.value?.flyToVehicle(vehicle);
 }
 
 function focusRoute(route: TransitRoute) {
   activeRouteId.value = route.id;
-  selectedVehicleId.value = null;
+  selectedDriverId.value = null;
   mapboxMapRef.value?.flyToRoute(route);
 }
 
 function clearAllFilters() {
   activeRouteId.value = null;
-  selectedVehicleId.value = null;
+  selectedDriverId.value = null;
   searchQuery.value = '';
   mapboxMapRef.value?.resetMapCenter();
-}
-
-function getCapacityColor(current: number, max: number): { bg: string; text: string; bar: string } {
-  const ratio = max > 0 ? current / max : 0;
-  if (ratio >= 0.9) return { bg: 'bg-rose-50', text: 'text-rose-700', bar: 'bg-rose-500' };
-  if (ratio >= 0.7) return { bg: 'bg-amber-50', text: 'text-amber-700', bar: 'bg-amber-500' };
-  return { bg: 'bg-emerald-50', text: 'text-emerald-700', bar: 'bg-emerald-500' };
 }
 </script>
 
@@ -139,16 +164,62 @@ function getCapacityColor(current: number, max: number): { bg: string; text: str
       <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <div class="flex items-center gap-2">
-              <span class="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span class="text-xs font-semibold text-emerald-700">Peta Trayek Live</span>
+            <div class="flex flex-wrap items-center gap-2">
+              <!-- Which city the visitor is being shown -->
+              <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+                <UIcon
+                  name="i-lucide-map-pin"
+                  class="h-3.5 w-3.5 text-[#123d8d]"
+                />
+                <template v-if="detecting">
+                  Mendeteksi kota…
+                </template>
+                <template v-else-if="cityName">
+                  {{ cityName }}
+                </template>
+                <template v-else>
+                  Seluruh jaringan
+                </template>
+                <!-- <button
+                  type="button"
+                  class="ml-0.5 cursor-pointer rounded px-1 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700"
+                  title="Deteksi ulang kota"
+                  @click="redetect"
+                >
+                  ↻
+                </button> -->
+              </span>
+
+              <span
+                class="inline-flex items-center gap-1.5 text-xs font-semibold"
+                :class="drivers.length ? 'text-emerald-700' : 'text-slate-500'"
+              >
+                <span
+                  class="inline-flex h-2.5 w-2.5 rounded-full"
+                  :class="drivers.length ? 'animate-pulse bg-emerald-500' : 'bg-slate-300'"
+                />
+                {{ drivers.length }} armada aktif
+              </span>
             </div>
 
             <h1 class="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-              Pemantauan Angkot Bandung
+              {{ cityName ? `Pemantauan Angkot ${cityName}` : 'Pemantauan Angkot Bandung' }}
             </h1>
             <p class="mt-1 max-w-2xl text-xs text-slate-600 sm:text-sm">
-              Jelajahi trayek angkot, halte, tarif, dan estimasi waktu tiba di seluruh koridor utama.
+              {{ isDriver
+                ? 'Pantau armada yang sedang aktif dan temukan penumpang yang mencari angkot di sekitar Anda.'
+                : 'Trayek dan armada di kota Anda dimuat otomatis dari lokasi Anda — pindah kota dan peta ikut berganti.' }}
+            </p>
+
+            <p
+              v-if="cityError"
+              class="mt-1.5 flex items-center gap-1.5 text-[11px] text-amber-700"
+            >
+              <UIcon
+                name="i-lucide-info"
+                class="h-3.5 w-3.5 shrink-0"
+              />
+              {{ cityError }}
             </p>
           </div>
 
@@ -157,7 +228,7 @@ function getCapacityColor(current: number, max: number): { bg: string; text: str
             <UInput
               v-model="searchQuery"
               icon="i-lucide-search"
-              placeholder="Cari trayek, halte, atau kode..."
+              placeholder="Cari trayek, halte, atau plat..."
               size="lg"
               :ui="{
                 base: 'bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:bg-white',
@@ -171,13 +242,13 @@ function getCapacityColor(current: number, max: number): { bg: string; text: str
               <span class="text-slate-400">Cepat:</span>
 
               <button
-                v-for="code in quickFilters"
-                :key="code"
+                v-for="name in quickFilters"
+                :key="name"
                 type="button"
                 class="cursor-pointer underline hover:text-blue-700"
-                @click="searchQuery = code"
+                @click="searchQuery = name"
               >
-                {{ code }}
+                {{ name }} {{ quickFilters[quickFilters.length - 1] !== name ? '·' : '' }}
               </button>
             </div>
           </div>
@@ -235,10 +306,12 @@ function getCapacityColor(current: number, max: number): { bg: string; text: str
           />
         </div>
         <h2 class="mt-4 text-base font-bold text-slate-900">
-          Belum ada trayek yang dipublikasikan
+          {{ cityName ? `Belum ada trayek di ${cityName}` : 'Belum ada trayek yang dipublikasikan' }}
         </h2>
         <p class="mx-auto mt-1 max-w-md text-sm text-slate-500">
-          Jaringan trayek akan muncul di sini setelah administrator menyetujui dan mempublikasikan rute.
+          {{ cityName
+            ? `Belum ada rute yang dipublikasikan untuk ${cityName}. Coba deteksi ulang kota Anda, atau periksa kembali nanti.`
+            : 'Jaringan trayek akan muncul di sini setelah administrator menyetujui dan mempublikasikan rute.' }}
         </p>
         <NuxtLink
           to="/register/driver"
@@ -264,12 +337,12 @@ function getCapacityColor(current: number, max: number): { bg: string; text: str
               ref="mapboxMapRef"
               map-height="100%"
               :routes="routes"
-              :selected-vehicle-id="selectedVehicleId"
+              :vehicles="location.mapVehicles"
+              :selected-vehicle-id="selectedDriverId"
               :active-route-id="activeRouteId"
-              :is-simulating="isSimulating"
+              :is-simulating="false"
               @select-vehicle="handleSelectVehicle"
               @select-route="handleSelectRoute"
-              @update:vehicles="handleVehiclesUpdate"
             />
           </div>
 
@@ -278,7 +351,7 @@ function getCapacityColor(current: number, max: number): { bg: string; text: str
               name="i-lucide-info"
               class="h-3.5 w-3.5 shrink-0"
             />
-            Posisi armada masih disimulasikan di atas trayek asli sampai pelaporan GPS pengemudi aktif.
+            Posisi berasal dari pengemudi yang mengaktifkan berbagi lokasi dan diperbarui secara berkala.
           </p>
 
           <!-- Route Cards Grid -->
@@ -318,6 +391,9 @@ function getCapacityColor(current: number, max: number): { bg: string; text: str
 
         <!-- Side panel (second on mobile) -->
         <div class="order-2 space-y-4 lg:order-1 lg:col-span-4">
+          <NearestPassengerCard v-if="isDriver" />
+          <NearestAngkotCard v-else />
+
           <!-- Trayek Selector -->
           <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div class="mb-3 flex items-center justify-between">
@@ -383,129 +459,151 @@ function getCapacityColor(current: number, max: number): { bg: string; text: str
             </div>
           </div>
 
-          <!-- Selected Vehicle Card -->
+          <!-- Selected driver -->
           <div
-            v-if="selectedVehicle"
-            class="rounded-2xl border-2 border-blue-600 bg-white p-4 shadow-md transition"
+            v-if="selectedDriver"
+            class="rounded-2xl border-2 border-blue-600 bg-white p-4 shadow-md"
           >
             <div class="flex items-start justify-between border-b border-slate-100 pb-3">
               <div class="flex items-center gap-2.5">
                 <div
-                  class="flex h-10 w-12 items-center justify-center rounded-xl text-sm font-black text-white shadow-sm"
-                  :style="{ backgroundColor: routeColor(selectedVehicle.routeId) }"
+                  class="flex h-10 w-14 items-center justify-center rounded-xl text-xs font-black text-white shadow-sm"
+                  :style="{ backgroundColor: driverColor(selectedDriver) }"
                 >
-                  {{ selectedVehicle.angkotCode }}
+                  {{ selectedDriver.routeCode || '—' }}
                 </div>
-                <div>
-                  <div class="flex items-center gap-2">
-                    <span class="text-sm font-bold tracking-tight text-slate-900">{{ selectedVehicle.plateNumber }}</span>
-                    <span class="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">Aktif</span>
-                  </div>
-                  <p class="text-xs text-slate-500">
-                    {{ selectedVehicle.routeName }}
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-bold tracking-tight text-slate-900">
+                    {{ selectedDriver.plateNumber || selectedDriver.name }}
                   </p>
+                  <p class="truncate text-xs text-slate-500">{{ selectedDriver.name }}</p>
                 </div>
               </div>
+
               <button
                 type="button"
                 class="cursor-pointer rounded-md p-1 text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                 title="Tutup detail"
-                @click="selectedVehicleId = null"
+                @click="selectedDriverId = null"
               >
                 ✕
               </button>
             </div>
 
-            <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+            <dl class="mt-3 grid grid-cols-2 gap-2 text-xs">
               <div class="rounded-xl bg-slate-50 p-2.5">
-                <span class="block text-[10px] font-semibold text-slate-500">Pengemudi</span>
-                <span class="mt-0.5 block truncate font-bold text-slate-900">{{ selectedVehicle.driverName }}</span>
+                <dt class="text-[10px] font-semibold text-slate-500">
+                  Koridor
+                </dt>
+                <dd class="mt-0.5 truncate font-bold text-slate-900">
+                  {{ selectedDriver.startRoute || '—' }} → {{ selectedDriver.endRoute || '—' }}
+                </dd>
               </div>
               <div class="rounded-xl bg-slate-50 p-2.5">
-                <span class="block text-[10px] font-semibold text-slate-500">Kecepatan</span>
-                <span class="mt-0.5 block font-bold text-slate-900">{{ selectedVehicle.speedKmH }} km/jam</span>
+                <dt class="text-[10px] font-semibold text-slate-500">
+                  Kecepatan
+                </dt>
+                <dd class="mt-0.5 font-bold text-slate-900">
+                  {{ Math.round(selectedDriver.speedKmh ?? 0) }} km/jam
+                </dd>
               </div>
-            </div>
+              <div
+                v-if="selectedDriver.distanceKm !== undefined"
+                class="rounded-xl bg-slate-50 p-2.5"
+              >
+                <dt class="text-[10px] font-semibold text-slate-500">
+                  Jarak dari Anda
+                </dt>
+                <dd class="mt-0.5 font-bold text-slate-900">
+                  {{ selectedDriver.distanceKm.toFixed(1) }} km
+                </dd>
+              </div>
+              <div class="rounded-xl bg-slate-50 p-2.5">
+                <dt class="text-[10px] font-semibold text-slate-500">
+                  Diperbarui
+                </dt>
+                <dd class="mt-0.5 font-bold text-slate-900">
+                  {{ updatedAgo(selectedDriver.updatedAt) }}
+                </dd>
+              </div>
+            </dl>
 
-            <div class="mt-3 rounded-xl bg-slate-50 p-2.5">
-              <div class="flex items-center justify-between text-xs">
-                <span class="text-[11px] font-medium text-slate-600">Kapasitas Kursi</span>
-                <span
-                  class="font-bold"
-                  :class="getCapacityColor(selectedVehicle.currentCapacity, selectedVehicle.maxCapacity).text"
-                >
-                  {{ selectedVehicle.currentCapacity }} / {{ selectedVehicle.maxCapacity }} Penumpang
-                </span>
-              </div>
-              <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
-                <div
-                  class="h-full rounded-full transition-all duration-500"
-                  :class="getCapacityColor(selectedVehicle.currentCapacity, selectedVehicle.maxCapacity).bar"
-                  :style="{ width: `${Math.min(100, (selectedVehicle.currentCapacity / selectedVehicle.maxCapacity) * 100)}%` }"
-                />
-              </div>
-            </div>
-
-            <div class="mt-3 flex items-center justify-between rounded-xl border border-blue-100 bg-blue-50/80 p-3">
-              <div class="min-w-0">
-                <span class="block text-[10px] font-semibold uppercase tracking-wider text-blue-700">Pemberhentian Berikutnya</span>
-                <span class="mt-0.5 block truncate text-xs font-bold text-slate-900">{{ selectedVehicle.nextStopName }}</span>
-              </div>
-              <div class="shrink-0 text-right">
-                <span class="block text-[10px] font-medium text-slate-500">Estimasi Tiba</span>
-                <span class="text-xs font-black text-blue-800">~{{ selectedVehicle.etaMinutes }} Menit</span>
-              </div>
+            <!-- Which way to walk to reach this angkot -->
+            <div
+              v-if="selectedDriver.bearingDegrees !== undefined"
+              class="mt-3 rounded-xl border border-blue-100 bg-blue-50/60 p-2.5"
+            >
+              <DirectionPointer
+                :bearing="selectedDriver.bearingDegrees"
+                :distance-km="selectedDriver.distanceKm ?? null"
+                label="Dari posisi Anda"
+              />
             </div>
           </div>
 
-          <!-- Active Angkot List -->
+          <!-- Which way to walk from here to the selected angkot -->
+          <AngkotRouteMap
+            v-if="selectedDriver"
+            :driver="selectedDriver"
+          />
+
+          <!-- Active fleet -->
           <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div class="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-4 py-3">
               <div>
                 <h2 class="text-xs font-bold text-slate-900">
-                  Armada Beroperasi
+                  Armada aktif
                 </h2>
                 <p class="text-[10px] text-slate-500">
                   Klik kendaraan untuk fokus di peta
                 </p>
               </div>
               <span class="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-800">
-                {{ filteredVehicles.length }}
+                {{ filteredDrivers.length }}
               </span>
             </div>
 
             <div class="max-h-[280px] divide-y divide-slate-100 overflow-y-auto">
-              <div
-                v-if="filteredVehicles.length === 0"
+              <p
+                v-if="filteredDrivers.length === 0"
                 class="p-6 text-center text-xs text-slate-400"
               >
-                Tidak ada kendaraan yang sesuai filter.
-              </div>
+                Belum ada armada yang membagikan lokasi.
+              </p>
 
               <button
-                v-for="vehicle in filteredVehicles"
-                :key="vehicle.id"
+                v-for="driver in filteredDrivers"
+                :key="driver.userId"
                 type="button"
-                class="flex w-full cursor-pointer items-center justify-between p-3 text-left transition hover:bg-slate-50"
-                :class="selectedVehicleId === vehicle.id ? 'bg-blue-50/50' : ''"
-                @click="focusVehicle(vehicle)"
+                class="flex w-full cursor-pointer items-center justify-between gap-3 p-3 text-left transition hover:bg-slate-50"
+                :class="selectedDriverId === driver.userId ? 'bg-blue-50/50' : ''"
+                @click="focusDriver(driver)"
               >
                 <div class="flex min-w-0 items-center gap-2.5">
                   <span
-                    class="flex h-7 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-black text-white"
-                    :style="{ backgroundColor: routeColor(vehicle.routeId) }"
+                    class="flex h-7 w-9 shrink-0 items-center justify-center rounded-lg text-[11px] font-black text-white"
+                    :style="{ backgroundColor: driverColor(driver) }"
                   >
-                    {{ vehicle.angkotCode }}
+                    {{ driver.routeCode || '—' }}
                   </span>
                   <div class="min-w-0">
-                    <p class="truncate text-xs font-bold text-slate-900">{{ vehicle.plateNumber }}</p>
-                    <p class="truncate text-[11px] text-slate-500">{{ vehicle.nextStopName }}</p>
+                    <p class="truncate text-xs font-bold text-slate-900">
+                      {{ driver.plateNumber || driver.name }}
+                    </p>
+                    <p class="truncate text-[11px] text-slate-500">
+                      {{ driver.name }} · {{ updatedAgo(driver.updatedAt) }}
+                    </p>
                   </div>
                 </div>
 
                 <div class="shrink-0 text-right">
-                  <span class="block text-[11px] font-bold text-slate-700">{{ vehicle.speedKmH }} km/jam</span>
-                  <span class="block text-[10px] font-semibold text-emerald-700">ETA {{ vehicle.etaMinutes }}m</span>
+                  <span class="block text-[11px] font-bold text-slate-700">{{ Math.round(driver.speedKmh ?? 0) }} km/jam</span>
+                  <span
+                    v-if="driver.distanceKm !== undefined"
+                    class="block text-[10px] font-semibold text-emerald-700"
+                  >
+                    {{ driver.distanceKm.toFixed(1) }} km
+                  </span>
                 </div>
               </button>
             </div>
@@ -568,7 +666,7 @@ function getCapacityColor(current: number, max: number): { bg: string; text: str
           Smart City Transit Tracking
         </h2>
         <p class="mt-2 text-sm text-slate-600">
-          Membantu penumpang dan pengemudi dengan peta trayek, estimasi waktu tiba, dan transparansi kapasitas di Kota Bandung.
+          Membantu penumpang dan pengemudi dengan peta trayek, posisi armada, dan notifikasi angkot terdekat di Kota {{ cityName }}.
         </p>
       </div>
 
@@ -578,10 +676,10 @@ function getCapacityColor(current: number, max: number): { bg: string; text: str
             📍
           </div>
           <h3 class="mb-1 text-base font-bold text-slate-900">
-            Peta Trayek Interaktif
+            Posisi Armada Langsung
           </h3>
           <p class="text-xs leading-relaxed text-slate-500">
-            Lihat setiap koridor, halte, dan pergerakan armada langsung di peta Mapbox.
+            Lihat posisi angkot yang mengaktifkan berbagi lokasi, langsung di peta Mapbox.
           </p>
         </div>
         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -589,21 +687,21 @@ function getCapacityColor(current: number, max: number): { bg: string; text: str
             ⏱️
           </div>
           <h3 class="mb-1 text-base font-bold text-slate-900">
-            Estimasi Waktu Tiba
+            Angkot Terdekat
           </h3>
           <p class="text-xs leading-relaxed text-slate-500">
-            Ketahui perkiraan waktu tiba menuju halte tujuan untuk memangkas waktu menunggu.
+            Bagikan lokasi Anda untuk menemukan armada terdekat beserta jaraknya.
           </p>
         </div>
         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div class="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 text-xl font-bold text-purple-600">
-            👥
+            🔔
           </div>
           <h3 class="mb-1 text-base font-bold text-slate-900">
-            Indikator Kapasitas
+            Notifikasi Real-Time
           </h3>
           <p class="text-xs leading-relaxed text-slate-500">
-            Cek ketersediaan kursi sebelum naik lewat penanda kapasitas berwarna.
+            Pengemudi dan penumpang menerima pemberitahuan langsung saat armada atau penumpang berada di sekitar.
           </p>
         </div>
       </div>

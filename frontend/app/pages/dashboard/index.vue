@@ -247,6 +247,11 @@ const totalStops = computed(() =>
           />
         </div>
 
+        <div class="grid gap-4 xl:grid-cols-2">
+          <NearestPassengerCard />
+          <PassengerRouteMap />
+        </div>
+
         <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <div class="flex items-center justify-between">
             <h2 class="text-sm font-semibold text-slate-900">Recent submissions</h2>
@@ -319,6 +324,10 @@ const totalStops = computed(() =>
             tone="slate"
           />
         </div>
+
+        <NearestAngkotCard />
+
+        <AngkotRouteMap />
 
         <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <div class="flex items-center justify-between">

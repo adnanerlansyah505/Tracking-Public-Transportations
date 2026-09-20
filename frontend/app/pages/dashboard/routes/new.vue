@@ -74,7 +74,7 @@ async function onSubmit(payload: RoutePayload) {
         v-if="role === 'driver'"
         icon="i-lucide-circle-help"
         color="neutral"
-        variant="soft"
+        variant="solid"
         @click="guideOpen = true"
       >
         How to submit

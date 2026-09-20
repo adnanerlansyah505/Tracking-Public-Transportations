@@ -322,16 +322,11 @@ async function signOut() {
 
             <!-- Right -->
             <div class="flex items-center gap-3">
+              <!-- Driver location sharing -->
+              <DriverLocationSharing />
+
               <!-- Notifications -->
-              <UButton
-                icon="i-lucide-bell"
-                color="neutral"
-                variant="ghost"
-                class="relative"
-                :ui="{
-                  base: 'text-black hover:text-white'
-                }"
-              />
+              <NotificationBell />
 
               <!-- User -->
               <div class="hidden items-center gap-2 sm:flex">

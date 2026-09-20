@@ -31,6 +31,7 @@ const form = reactive({
   name: props.initial?.name ?? '',
   origin: props.initial?.origin ?? '',
   destination: props.initial?.destination ?? '',
+  city: props.initial?.city ?? 'Bandung',
   fare: props.initial?.fare ?? '',
   operatingHours: props.initial?.operatingHours ?? '',
   color: props.initial?.color ?? '#123d8d',
@@ -43,12 +44,19 @@ const form = reactive({
 
 const error = ref('');
 
+const { items: cityItems, ensure: ensureCities } = useSupportedCities();
+
+onMounted(() => {
+  ensureCities();
+});
+
 function validate(): string {
   const required: Array<[string | number, string]> = [
     [form.code, 'Route code'],
     [form.name, 'Route name'],
     [form.origin, 'Origin'],
     [form.destination, 'Destination'],
+    [form.city, 'City'],
     [form.fare, 'Fare per-destination'],
     [form.operatingHours, 'Operating hours'],
   ];
@@ -99,6 +107,7 @@ function onSubmit() {
     name: form.name.trim(),
     origin: form.origin.trim(),
     destination: form.destination.trim(),
+    city: form.city.trim(),
     fare: form.fare.trim(),
     operatingHours: form.operatingHours.trim(),
     color: form.color,
@@ -152,6 +161,17 @@ function onSubmit() {
           <UInput
             v-model="form.destination"
             placeholder="e.g. Terminal Ledeng"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField
+          label="City"
+          help="The city this route belongs to. The map switches to it automatically when a visitor is there."
+        >
+          <USelect
+            v-model="form.city"
+            :items="cityItems"
             class="w-full"
           />
         </UFormField>
