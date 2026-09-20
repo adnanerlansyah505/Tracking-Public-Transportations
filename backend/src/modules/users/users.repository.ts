@@ -133,6 +133,34 @@ export class UserRepository {
         return user ?? null;
     }
 
+    async countByRole(role: UserRole): Promise<number> {
+        const [result] = await this.db
+            .select({ value: count() })
+            .from(users)
+            .where(
+                and(
+                    eq(users.role, role),
+                    isNull(users.deletedAt),
+                ),
+            );
+
+        return result?.value ?? 0;
+    }
+
+    async findIdsByRole(role: UserRole): Promise<string[]> {
+        const rows = await this.db
+            .select({ id: users.id })
+            .from(users)
+            .where(
+                and(
+                    eq(users.role, role),
+                    isNull(users.deletedAt),
+                ),
+            );
+
+        return rows.map((row) => row.id);
+    }
+
     async findByUsername(username: string) {
         const [user] = await this.db
             .select()

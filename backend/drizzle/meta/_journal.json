@@ -64,6 +64,13 @@
       "when": 1788041579428,
       "tag": "0008_tiny_captain_marvel",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1789785130882,
+      "tag": "0009_petite_alex_power",
+      "breakpoints": true
     }
   ]
 }

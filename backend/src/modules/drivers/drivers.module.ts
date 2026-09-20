@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common';
 import { UsersModule } from '../users/users.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { DriversController } from './drivers.controller';
 import { DriverService } from './driver.service';
 import { DriverRepository } from './driver.repository';
 import { AuthRepository } from '../auth/auth.repository';
 
 @Module({
-  imports: [UsersModule],
+  imports: [UsersModule, NotificationsModule],
   controllers: [DriversController],
   providers: [DriverService, DriverRepository, AuthRepository],
   exports: [DriverRepository],

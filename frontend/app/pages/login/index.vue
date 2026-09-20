@@ -11,6 +11,12 @@ const error = ref('');
 const submitting = ref(false);
 const showPassword = ref(false);
 
+function resolveRedirect(value: unknown) {
+  return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//')
+    ? value
+    : '/dashboard';
+}
+
 async function submit() {
   error.value = '';
 
@@ -29,8 +35,12 @@ if (!cleanIdentifier || !cleanPassword) {
 
   submitting.value = true;
   try {
-    await auth.login({ identifier: cleanIdentifier, password: cleanPassword }, accountType.value);
-    await navigateTo('/dashboard');
+    if (accountType.value === 'driver') {
+      await auth.loginDriver({ identifier: cleanIdentifier, password: cleanPassword });
+    } else {
+      await auth.login({ identifier: cleanIdentifier, password: cleanPassword });
+    }
+    await navigateTo(resolveRedirect(route.query.redirect));
   } catch (cause) {
     error.value = message(cause, 'Unable to sign in with those credentials.');
   } finally {
@@ -81,7 +91,7 @@ function switchType(type: 'passenger' | 'driver') {
         </UFormField>
 
         <p v-if="error" class="auth-error">{{ error }}</p>
-        <button class="google-auth-button" type="button" @click="auth.loginWithGoogle()">Continue with Google</button>
+        <button class="google-auth-button" type="button" @click="auth.loginWithGoogle(accountType)">Continue with Google</button>
         <UButton class="auth-submit" type="submit" :loading="submitting" :ui="{ base: 'flex items-center gap-2' }">Sign in</UButton>
       </form>
 

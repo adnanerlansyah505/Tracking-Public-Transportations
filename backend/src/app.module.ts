@@ -19,6 +19,9 @@ import { AppCacheModule } from './common/cache/cache.module';
 import { FileModule } from './common/file/file.module';
 import { EmailModule } from './common/email/email.module';
 import { DriversModule } from './modules/drivers/drivers.module';
+import { RoutesModule } from './modules/routes/routes.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { LocationModule } from './modules/location/location.module';
 
 @Module({
   imports: [
@@ -36,6 +39,9 @@ import { DriversModule } from './modules/drivers/drivers.module';
     UsersModule,
     ProfilesModule,
     DriversModule,
+    RoutesModule,
+    NotificationsModule,
+    LocationModule,
     CsrfModule,
     ThrottlerModule.forRoot([
       // {

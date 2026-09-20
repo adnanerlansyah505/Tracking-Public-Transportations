@@ -1,13 +1,10 @@
 import {
   IsDateString,
   IsIn,
-  IsInt,
   IsOptional,
   IsString,
   MaxLength,
-  Min,
 } from 'class-validator';
-import { Type } from 'class-transformer';
 
 export class UpdateProfileDTO {
   @IsOptional()
@@ -31,10 +28,9 @@ export class UpdateProfileDTO {
   bio?: string;
 
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  phone?: number;
+  @IsString()
+  @MaxLength(32)
+  phone?: string;
 
   @IsOptional()
   @IsString()

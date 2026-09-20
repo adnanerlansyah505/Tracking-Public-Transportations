@@ -16,7 +16,11 @@ const initials = computed(() => displayName.value.trim().split(/\s+/).slice(0, 2
 const roleLabel = computed(() => auth.user?.role ? `${auth.user.role.charAt(0).toUpperCase()}${auth.user.role.slice(1)}` : 'User');
 const accountIdentifier = computed(() => auth.user?.driverDetails?.identityCardNumber || auth.user?.id || '—');
 
+const mounted = ref(false);
+
 onMounted(async () => {
+  mounted.value = true;
+
   if (!auth.user?.profile) {
     try {
       await auth.fetchMe();
@@ -34,10 +38,22 @@ const navigationItems: NavigationItem[] = [
     roles: ['admin', 'driver', 'passenger'],
   },
   {
-    label: 'My Routes',
+    label: 'Routes',
     icon: 'i-lucide-map',
     to: '/dashboard/routes',
-    roles: ['driver', 'passenger'],
+    roles: ['admin', 'driver', 'passenger'],
+  },
+  {
+    label: 'Route requests',
+    icon: 'i-lucide-inbox',
+    to: '/dashboard/route-requests',
+    roles: ['admin'],
+  },
+  {
+    label: 'Driver requests',
+    icon: 'i-lucide-steering-wheel',
+    to: '/dashboard/driver-requests',
+    roles: ['admin'],
   },
   {
     label: 'Profile',
@@ -90,7 +106,25 @@ async function signOut() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#f5f7fa] text-slate-900">
+  <!--
+    The dashboard is authenticated, and the session only exists on the client.
+    Render a placeholder until mount so the server and client agree (otherwise
+    every user-dependent node hydrates with a mismatch).
+  -->
+  <div
+    v-if="!mounted"
+    class="flex min-h-screen items-center justify-center bg-[#f5f7fa]"
+  >
+    <UIcon
+      name="i-lucide-loader-circle"
+      class="h-6 w-6 animate-spin text-[#123d8d]"
+    />
+  </div>
+
+  <div
+    v-else
+    class="min-h-screen bg-[#f5f7fa] text-slate-900"
+  >
     <div class="flex min-h-screen">
       <!-- ========================================== -->
       <!-- SIDEBAR -->
@@ -288,16 +322,11 @@ async function signOut() {
 
             <!-- Right -->
             <div class="flex items-center gap-3">
+              <!-- Driver location sharing -->
+              <DriverLocationSharing />
+
               <!-- Notifications -->
-              <UButton
-                icon="i-lucide-bell"
-                color="neutral"
-                variant="ghost"
-                class="relative"
-                :ui="{
-                  base: 'text-black hover:text-white'
-                }"
-              />
+              <NotificationBell />
 
               <!-- User -->
               <div class="hidden items-center gap-2 sm:flex">

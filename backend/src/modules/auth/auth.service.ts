@@ -16,6 +16,7 @@ import { DriverRepository } from '../drivers/driver.repository';
 import { RegisterDriverDTO } from './dto/register-driver.dto';
 import { UserRole } from './decorators/roles.decorator';
 import { FileService } from '../../common/file/file.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { DOCUMENT_MIME_TYPES, MAX_DOCUMENT_SIZE, MAX_IMAGE_SIZE } from '../../common/file/file.constants';
 import { validateUploadFiles } from '../../common/file/file.validation';
 
@@ -39,6 +40,7 @@ export class AuthService {
         private emailService: EmailService,
         private config: ConfigService,
         private fileService: FileService,
+        private notifications: NotificationsService,
     ) {}
 
     async register(dto: RegisterDTO) {
@@ -102,6 +104,7 @@ export class AuthService {
     async login(dto: LoginDTO) {
         const user = await this.userRepository.findByLoginIdentifier(dto.identifier);
         if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) throw new UnauthorizedException("Invalid email or password")
+        if (user.role == UserRole.Driver) throw new ForbiddenException("You can't login with this account.")
         this.ensureAccountCanAuthenticate(user);
         if (!user.emailVerifiedAt && user.role != 'admin') throw new UnauthorizedException('Please verify your email address before logging in.');
         return this.createSession(user)
@@ -199,6 +202,14 @@ export class AuthService {
             registrationCommitted = true;
 
             await this.sendVerificationEmail(result.user, result.verification.token, result.verification.expiresAt);
+
+            await this.notifications.notifyAdmins({
+                type: 'driver_registered',
+                title: 'New driver registration',
+                body: `${dto.fullName} · ${dto.vehiclePlateNumber} is awaiting activation.`,
+                data: { userId: result.user.id },
+            });
+
             return {
                 message: 'Driver registration submitted and awaiting admin activation.',
                 status: true,
@@ -236,7 +247,7 @@ export class AuthService {
         avatar?: string;
         provider: string;
         providerId: string;
-    }) {
+    }, requestedRole: 'driver' | 'passenger' = 'passenger') {
         const email = profile.email;
 
         if (!email) {
@@ -256,6 +267,10 @@ export class AuthService {
                     email,
                     passwordHash: await bcrypt.hash(randomBytes(32).toString('hex'), 12),
                     emailVerifiedAt: new Date(),
+                    // A Google driver skips the vehicle step; they complete it
+                    // later from their profile, so the account must be usable now.
+                    role: requestedRole === 'driver' ? UserRole.Driver : UserRole.Passenger,
+                    status: 'active',
                 },
                 tx,
             );

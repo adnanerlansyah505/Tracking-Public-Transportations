@@ -53,3 +53,9 @@
 ## Certification
 - To see the certificate if the user has already passed the graduation criteria of the classroom
 - Can download the certificate
+
+## Other Tasks
+- Otomatis mencarikan angkot yang ada dari kota yang saat ini user sedang berada.
+- Pointer Driver & Passenger sekaligus juga direction lokasi user saat dilihat dari driver, begitu juga sebaliknya dengan user. 
+- Chat with driver
+- Clear notifications

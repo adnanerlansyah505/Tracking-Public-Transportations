@@ -1,4 +1,3 @@
-```vue
 <script setup lang="ts">
 definePageMeta({ layout: 'auth' });
 
@@ -690,4 +689,3 @@ async function submit() {
     </UCard>
   </section>
 </template>
-```
