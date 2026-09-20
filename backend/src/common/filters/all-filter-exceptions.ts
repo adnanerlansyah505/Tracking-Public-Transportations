@@ -13,12 +13,21 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
 
-    console.log('EXCEPTION:', exception);
+    const isCsrfError = this.isCsrfError(exception);
+    const httpException = this.asHttpException(exception);
+    const status = isCsrfError
+      ? HttpStatus.FORBIDDEN
+      : httpException?.getStatus() ?? HttpStatus.INTERNAL_SERVER_ERROR;
+
+    // 4xx responses are ordinary client errors — only real faults get a stack.
+    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+      console.error('EXCEPTION:', exception);
+    }
 
     // ----------------------------------------
     // CSRF error
     // ----------------------------------------
-    if (this.isCsrfError(exception)) {
+    if (isCsrfError) {
       response.status(HttpStatus.FORBIDDEN).json({
         status: false,
         message: 'Invalid CSRF token.',
@@ -31,8 +40,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
     // ----------------------------------------
     // NestJS HttpException
     // ----------------------------------------
-    const httpException = this.asHttpException(exception);
-    const status = httpException?.getStatus() ?? HttpStatus.INTERNAL_SERVER_ERROR;
     const body = httpException?.getResponse() ?? 'Internal server error';
 
     if (typeof body === 'object' && body !== null) {

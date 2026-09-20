@@ -2,7 +2,7 @@ import { Inject } from "@nestjs/common";
 import { DB } from "../../database/database.module";
 import type { DbClient, DbTransaction } from "../../database/database.module";
 import { profiles } from "../../database/schema";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 
 export class ProfileRepository {
 
@@ -30,6 +30,18 @@ export class ProfileRepository {
       .limit(1);
 
     return profile ?? null;
+  }
+
+  async findByUserIds(userIds: string[]) {
+    if (userIds.length === 0) return [];
+
+    return this.db
+      .select()
+      .from(profiles)
+      .where(and(
+        inArray(profiles.userId, userIds),
+        isNull(profiles.deletedAt),
+      ));
   }
   
   async create(
@@ -62,6 +74,9 @@ export class ProfileRepository {
             fullName: string;
             city: string;
             country: string;
+            bio: string;
+            phone: string;
+            address: string;
             birthDate: string;
             gender: 'male' | 'female';
             photo: string;

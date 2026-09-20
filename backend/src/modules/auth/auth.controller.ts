@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, Req, Res, UploadedFiles, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query, Req, Res, UploadedFiles, UseGuards, UseInterceptors } from "@nestjs/common";
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import type { Request, Response } from 'express';
 import { AuthService } from "./auth.service";
@@ -43,6 +43,7 @@ export class AuthController {
     }
 
     @Public()
+    @HttpCode(HttpStatus.OK)
     @Post("login")
     async login(@Body() dto: LoginDTO, @Res({ passthrough: true }) res: Response) {
         const session = await this.authService.login(dto);
@@ -51,6 +52,7 @@ export class AuthController {
     }
 
     @Public()
+    @HttpCode(HttpStatus.OK)
     @Post("login/driver")
     async loginDriver(@Body() dto: LoginDTO, @Res({ passthrough: true }) res: Response) {
         const session = await this.authService.loginDriver(dto);
@@ -59,6 +61,7 @@ export class AuthController {
     }
 
     @Public()
+    @HttpCode(HttpStatus.OK)
     @Post('refresh')
     async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
         const session = await this.authService.refreshSession(req.cookies?.refresh_token);
@@ -67,6 +70,7 @@ export class AuthController {
     }
 
     @Public()
+    @HttpCode(HttpStatus.OK)
     @Post('logout')
     async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
         await this.authService.logout(req.cookies?.refresh_token);
@@ -85,7 +89,8 @@ export class AuthController {
     @Get('google/callback')
     @UseGuards(GoogleOAuthGuard)
     async googleCallback(@Req() req: Request, @Res() res: Response) {
-        const session = await this.authService.loginWithGoogle((req as any).user);
+        const requestedRole = req.query?.state === 'driver' ? 'driver' : 'passenger';
+        const session = await this.authService.loginWithGoogle((req as any).user, requestedRole);
         this.setRefreshToken(res, session.refreshToken, session.refreshTokenExpiresAt);
         const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:4000';
 
@@ -94,9 +99,9 @@ export class AuthController {
 
     @Get('me') me(@CurrentUser() user: { id: string }) { return this.authService.me(user.id); }
 
-    @Public() @Post("verify-email") verifyEmail(@Query("token") token: string) { return this.authService.verifyEmail(token) };
+    @Public() @HttpCode(HttpStatus.OK) @Post("verify-email") verifyEmail(@Query("token") token: string) { return this.authService.verifyEmail(token) };
 
-    @Public() @Throttle({ default: { limit: 3, ttl: 60000 }}) @Post("resend-verification") resendVerification(
+    @Public() @Throttle({ default: { limit: 3, ttl: 60000 }}) @HttpCode(HttpStatus.OK) @Post("resend-verification") resendVerification(
         @Body()
         dto: ResendVerificationDTO,
     ) {

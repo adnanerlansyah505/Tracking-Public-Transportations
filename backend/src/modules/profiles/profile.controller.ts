@@ -23,7 +23,7 @@ export class ProfileController {
   @Get()
   async getMyProfile(@Req() req: any) {
     return this.profileService.findByUserId(
-      req.user.sub,
+      req.user.id,
     );
   }
 

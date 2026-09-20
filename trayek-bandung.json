@@ -1,0 +1,166 @@
+{
+  "region": "Bandung Raya",
+  "currency": "IDR",
+  "updated_at": "2026-09-20",
+  "routes": [
+    {
+      "route_code": "02",
+      "route_name": "Abdul Muis - Dago",
+      "operator_origin": "Dishub Kota Bandung",
+      "vehicle_capacity": 12,
+      "operating_hours": { "start": "05:00", "end": "21:00" },
+      "fare": { "type": "distance-based", "min_fare": 3000, "max_fare": 7000 },
+      "origin_terminal": { "name": "Terminal Kebon Kelapa", "latitude": -6.926715, "longitude": 107.608352 },
+      "destination_terminal": { "name": "Terminal Dago", "latitude": -6.866952, "longitude": 107.616687 },
+      "waypoint_coordinates": [
+        { "name": "Simpang Lima", "latitude": -6.921350, "longitude": 107.616420 },
+        { "name": "Jl. Riau (RE Martadinata)", "latitude": -6.907952, "longitude": 107.612140 },
+        { "name": "Simpang Dago", "latitude": -6.885610, "longitude": 107.613890 }
+      ],
+      "streets_passed": ["Jl. Pungkur", "Jl. Karapitan", "Jl. Sunda", "Jl. Aceh", "Jl. RE Martadinata", "Jl. Ir. H. Juanda"]
+    },
+    {
+      "route_code": "05",
+      "route_name": "Cicaheum - Ledeng",
+      "operator_origin": "Dishub Kota Bandung",
+      "vehicle_capacity": 12,
+      "operating_hours": { "start": "05:00", "end": "22:00" },
+      "fare": { "type": "distance-based", "min_fare": 4000, "max_fare": 8000 },
+      "origin_terminal": { "name": "Terminal Cicaheum", "latitude": -6.904838, "longitude": 107.653603 },
+      "destination_terminal": { "name": "Terminal Ledeng", "latitude": -6.858712, "longitude": 107.598587 },
+      "waypoint_coordinates": [
+        { "name": "Supratman", "latitude": -6.903820, "longitude": 107.632110 },
+        { "name": "Gedung Sate", "latitude": -6.902481, "longitude": 107.618751 },
+        { "name": "Cihampelas", "latitude": -6.892601, "longitude": 107.604581 }
+      ],
+      "streets_passed": ["Jl. PHH Mustofa", "Jl. WR Supratman", "Jl. Diponegoro", "Jl. Tamansari", "Jl. Cihampelas", "Jl. Setiabudi"]
+    },
+    {
+      "route_code": "08",
+      "route_name": "Cicaheum - Cibaduyut",
+      "operator_origin": "Dishub Kota Bandung",
+      "vehicle_capacity": 12,
+      "operating_hours": { "start": "05:00", "end": "21:00" },
+      "fare": { "type": "distance-based", "min_fare": 4000, "max_fare": 8000 },
+      "origin_terminal": { "name": "Terminal Cicaheum", "latitude": -6.904838, "longitude": 107.653603 },
+      "destination_terminal": { "name": "Terminal Cibaduyut", "latitude": -6.953180, "longitude": 107.592110 },
+      "waypoint_coordinates": [
+        { "name": "Kiaracondong", "latitude": -6.918910, "longitude": 107.647520 },
+        { "name": "Carrefour Soekarno-Hatta", "latitude": -6.938120, "longitude": 107.636410 },
+        { "name": "Leuwipanjang", "latitude": -6.945890, "longitude": 107.598210 }
+      ],
+      "streets_passed": ["Jl. Jend. Ahmad Yani", "Jl. Ibrahim Adjie", "Jl. Soekarno-Hatta", "Jl. TVRI", "Jl. Raya Cibaduyut"]
+    },
+    {
+      "route_code": "09",
+      "route_name": "Stasiun Hall - Ciumbuleuit via Cihampelas",
+      "operator_origin": "Dishub Kota Bandung",
+      "vehicle_capacity": 12,
+      "operating_hours": { "start": "05:00", "end": "21:30" },
+      "fare": { "type": "distance-based", "min_fare": 3000, "max_fare": 7000 },
+      "origin_terminal": { "name": "Terminal Stasiun Hall", "latitude": -6.915901, "longitude": 107.602510 },
+      "destination_terminal": { "name": "Ciumbuleuit (Unpar)", "latitude": -6.872380, "longitude": 107.607420 },
+      "waypoint_coordinates": [
+        { "name": "Pasar Kaliki", "latitude": -6.910220, "longitude": 107.601190 },
+        { "name": "Ciwalk", "latitude": -6.893110, "longitude": 107.604920 },
+        { "name": "Gandok", "latitude": -6.882100, "longitude": 107.605300 }
+      ],
+      "streets_passed": ["Jl. Kebon Kawung", "Jl. Pasir Kaliki", "Jl. Pajajaran", "Jl. Cihampelas", "Jl. Siliwangi", "Jl. Ciumbuleuit"]
+    },
+    {
+      "route_code": "10",
+      "route_name": "Stasiun Hall - Sadang Serang",
+      "operator_origin": "Dishub Kota Bandung",
+      "vehicle_capacity": 12,
+      "operating_hours": { "start": "05:30", "end": "20:30" },
+      "fare": { "type": "distance-based", "min_fare": 3000, "max_fare": 6000 },
+      "origin_terminal": { "name": "Terminal Stasiun Hall", "latitude": -6.915901, "longitude": 107.602510 },
+      "destination_terminal": { "name": "Terminal Sadang Serang", "latitude": -6.883980, "longitude": 107.625120 },
+      "waypoint_coordinates": [
+        { "name": "Viaduct", "latitude": -6.916820, "longitude": 107.607310 },
+        { "name": "BIP (Bandung Indah Plaza)", "latitude": -6.908810, "longitude": 107.609820 },
+        { "name": "Monumen Perjuangan", "latitude": -6.893410, "longitude": 107.618900 }
+      ],
+      "streets_passed": ["Jl. Suniaraja", "Jl. Merdeka", "Jl. Lazuardi", "Jl. Ir. H. Juanda", "Jl. Dipatiukur", "Jl. Sadang Serang"]
+    },
+    {
+      "route_code": "18",
+      "route_name": "Panghegar - Dipatiukur",
+      "operator_origin": "Dishub Kota Bandung",
+      "vehicle_capacity": 12,
+      "operating_hours": { "start": "05:00", "end": "20:00" },
+      "fare": { "type": "distance-based", "min_fare": 4000, "max_fare": 8000 },
+      "origin_terminal": { "name": "Terminal Panghegar", "latitude": -6.929810, "longitude": 107.689210 },
+      "destination_terminal": { "name": "Terminal Dipatiukur", "latitude": -6.889310, "longitude": 107.617820 },
+      "waypoint_coordinates": [
+        { "name": "Ubertos", "latitude": -6.913820, "longitude": 107.687410 },
+        { "name": "Cicaheum", "latitude": -6.904838, "longitude": 107.653603 },
+        { "name": "ITB Dipatiukur", "latitude": -6.891100, "longitude": 107.617100 }
+      ],
+      "streets_passed": ["Jl. Soekarno-Hatta", "Jl. AH Nasution", "Jl. PHH Mustofa", "Jl. Cikutra", "Jl. Dipatiukur"]
+    },
+    {
+      "route_code": "26",
+      "route_name": "Cisitu - Tegalega",
+      "operator_origin": "Dishub Kota Bandung",
+      "vehicle_capacity": 12,
+      "operating_hours": { "start": "05:00", "end": "21:00" },
+      "fare": { "type": "distance-based", "min_fare": 3000, "max_fare": 7000 },
+      "origin_terminal": { "name": "Cisitu", "latitude": -6.878910, "longitude": 107.611200 },
+      "destination_terminal": { "name": "Terminal Tegalega", "latitude": -6.932910, "longitude": 107.603410 },
+      "waypoint_coordinates": [
+        { "name": "Simpang Dago", "latitude": -6.885610, "longitude": 107.613890 },
+        { "name": "Gramedia Merdeka", "latitude": -6.907120, "longitude": 107.610110 },
+        { "name": "ITC Kebon Kalapa", "latitude": -6.927110, "longitude": 107.606210 }
+      ],
+      "streets_passed": ["Jl. Cisitu", "Jl. Ir. H. Juanda", "Jl. Merdeka", "Jl. Lembong", "Jl. Pungkur", "Jl. Moch. Toha"]
+    },
+    {
+      "route_code": "31",
+      "route_name": "Antapani - Ciroyom",
+      "operator_origin": "Dishub Kota Bandung",
+      "vehicle_capacity": 12,
+      "operating_hours": { "start": "05:00", "end": "21:00" },
+      "fare": { "type": "distance-based", "min_fare": 3000, "max_fare": 7000 },
+      "origin_terminal": { "name": "Terminal Antapani", "latitude": -6.914210, "longitude": 107.659820 },
+      "destination_terminal": { "name": "Terminal Ciroyom", "latitude": -6.912380, "longitude": 107.581290 },
+      "waypoint_coordinates": [
+        { "name": "Flyover Antapani", "latitude": -6.912890, "longitude": 107.639100 },
+        { "name": "Stasiun Bandung (Utara)", "latitude": -6.913410, "longitude": 107.602110 },
+        { "name": "Pasar Ciroyom", "latitude": -6.912900, "longitude": 107.583400 }
+      ],
+      "streets_passed": ["Jl. Terusan Jakarta", "Jl. Jakarta", "Jl. LRE Martadinata", "Jl. Perintis Kemerdekaan", "Jl. Kebon Kawung", "Jl. Rajawali"]
+    },
+    {
+      "route_code": "CIM-KDL",
+      "route_name": "Cimahi - Cepadang - Cicaheum",
+      "operator_origin": "Dishub Kab. Bandung / Cimahi (AKDP)",
+      "vehicle_capacity": 12,
+      "operating_hours": { "start": "04:30", "end": "21:00" },
+      "fare": { "type": "distance-based", "min_fare": 5000, "max_fare": 12000 },
+      "origin_terminal": { "name": "Terminal Pasar Antri Cimahi", "latitude": -6.876210, "longitude": 107.542810 },
+      "destination_terminal": { "name": "Terminal Cicaheum", "latitude": -6.904838, "longitude": 107.653603 },
+      "waypoint_coordinates": [
+        { "name": "Cimindi", "latitude": -6.892110, "longitude": 107.561910 },
+        { "name": "Bandara Husein Sastranegara", "latitude": -6.901120, "longitude": 107.578120 },
+        { "name": "RS Hasan Sadikin", "latitude": -6.895110, "longitude": 107.598910 }
+      ],
+      "streets_passed": ["Jl. Raya Cimahi", "Jl. Raya Cibeureum", "Jl. Jend. Amir Machmud", "Jl. Pasteur", "Jl. PHH Mustofa"]
+    },
+    {
+      "route_code": "MJL-SDR",
+      "route_name": "Majalaya - Soreang",
+      "operator_origin": "Dishub Kabupaten Bandung",
+      "vehicle_capacity": 12,
+      "operating_hours": { "start": "05:00", "end": "19:00" },
+      "fare": { "type": "distance-based", "min_fare": 5000, "max_fare": 12000 },
+      "origin_terminal": { "name": "Terminal Majalaya", "latitude": -7.051910, "longitude": 107.756210 },
+      "destination_terminal": { "name": "Terminal Soreang", "latitude": -7.031290, "longitude": 107.528910 },
+      "waypoint_coordinates": [
+        { "name": "Banjaran", "latitude": -7.046120, "longitude": 107.588910 },
+        { "name": "Pemkab Bandung", "latitude": -7.025110, "longitude": 107.530120 }
+      ],
+      "streets_passed": ["Jl. Raya Majalaya-Banjaran", "Jl. Raya Banjaran", "Jl. Soreang-Banjaran", "Jl. Raya Soreang"]
+    }
+  ]
+}

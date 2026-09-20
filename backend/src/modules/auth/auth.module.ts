@@ -13,11 +13,13 @@ import { UsersModule } from '../users/users.module';
 import { ProfilesModule } from '../profiles/profiles.module';
 import { EmailModule } from '../../common/email/email.module';
 import { DriversModule } from '../drivers/drivers.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
     UsersModule,
     DriversModule,
+    NotificationsModule,
     PassportModule,
     ProfilesModule,
     EmailModule,
