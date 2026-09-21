@@ -12,7 +12,7 @@ type NavigationItem = {
 };
 
 const displayName = computed(() => auth.user?.profile?.fullName || auth.user?.username || auth.user?.email || 'Traveler');
-const initials = computed(() => displayName.value.trim().split(/\s+/).slice(0, 2).map((name) => name[0]).join('').toUpperCase());
+const initials = computed(() => displayName.value.trim().split(/\s+/).slice(0, 2).map((name: any) => name[0]).join('').toUpperCase());
 const roleLabel = computed(() => auth.user?.role ? `${auth.user.role.charAt(0).toUpperCase()}${auth.user.role.slice(1)}` : 'User');
 const accountIdentifier = computed(() => auth.user?.driverDetails?.identityCardNumber || auth.user?.id || '—');
 
@@ -51,7 +51,7 @@ const navigationItems: NavigationItem[] = [
   },
   {
     label: 'Driver requests',
-    icon: 'i-lucide-steering-wheel',
+    icon: 'i-lucide-speech',
     to: '/dashboard/driver-requests',
     roles: ['admin'],
   },
