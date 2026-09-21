@@ -7,29 +7,54 @@ import {
   existsSync,
   mkdirSync,
   unlink,
-  writeFile,
 } from 'node:fs';
 import { promises as fs } from 'fs';
 
 import { join, extname } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { tmpdir } from 'node:os';
 
 @Injectable()
 export class FileService {
 
-  private readonly uploadDirectory =
-    join(process.cwd(), 'uploads');
+  private uploadDirectory?: string;
 
-  constructor() {
-    this.ensureUploadDirectory();
-  }
-
-  private ensureUploadDirectory() {
-    if (!existsSync(this.uploadDirectory)) {
-      mkdirSync(this.uploadDirectory, {
-        recursive: true,
-      });
+  /**
+   * Resolved on first use rather than in the constructor: serverless platforms
+   * mount the application directory read-only, and touching the filesystem
+   * there would stop the whole application from booting.
+   */
+  private getUploadDirectory(): string {
+    if (this.uploadDirectory) {
+      return this.uploadDirectory;
     }
+
+    const candidates = [
+      process.env.UPLOAD_DIR,
+      join(process.cwd(), 'uploads'),
+      join(tmpdir(), 'angkot-uploads'),
+    ].filter(
+      (candidate): candidate is string =>
+        Boolean(candidate),
+    );
+
+    for (const candidate of candidates) {
+      try {
+        mkdirSync(candidate, {
+          recursive: true,
+        });
+
+        this.uploadDirectory = candidate;
+
+        return candidate;
+      } catch {
+        // Read-only or unavailable location: try the next candidate.
+      }
+    }
+
+    throw new InternalServerErrorException(
+      'No writable upload directory is available',
+    );
   }
 
   async save(
@@ -43,7 +68,7 @@ export class FileService {
     }
 
     const directoryPath = join(
-      this.uploadDirectory,
+      this.getUploadDirectory(),
       directory,
     );
 
@@ -91,16 +116,16 @@ export class FileService {
      *
      * into:
      *
-     * <project>/uploads/profiles/abc.jpg
+     * <upload directory>/profiles/abc.jpg
      */
-    const relativePath =
-      filePath.replace(/^\/+/, '');
+    const relativePath = filePath
+      .replace(/^\/+/, '')
+      .replace(/^uploads\/+/, '');
 
-    const absolutePath =
-      join(
-        process.cwd(),
-        relativePath,
-      );
+    const absolutePath = join(
+      this.getUploadDirectory(),
+      relativePath,
+    );
 
     try {
       await new Promise<void>((resolve, reject) => {
