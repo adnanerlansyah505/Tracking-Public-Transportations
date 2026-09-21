@@ -10,6 +10,7 @@ import { ResendVerificationDTO } from "./dto/resend-verification.dto";
 import { CurrentUser } from './decorators/current-user.decorator';
 import { GoogleOAuthGuard } from './guards/google-oauth.guard';
 import { RegisterDriverDTO } from './dto/register-driver.dto';
+import { cookieSameSite } from '../../common/cookies';
 
 @Controller("auth")
 export class AuthController {
@@ -128,7 +129,7 @@ export class AuthController {
         res.cookie('refresh_token', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
+            sameSite: cookieSameSite(),
             path: '/api/v1/auth',
             expires,
         });

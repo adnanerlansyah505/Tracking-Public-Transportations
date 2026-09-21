@@ -68,11 +68,11 @@ export async function createApp(existingServer?: Express): Promise<NestExpressAp
 
   // Config
   const config = app.get(ConfigService);
-  const frontendUrl = config.get<string>('FRONTEND_URL', 'http://localhost:4000');
+  const allowedOrigins = parseAllowedOrigins(config.get<string>('FRONTEND_URL'));
 
   // Cors
   app.enableCors({
-    origin: [frontendUrl],
+    origin: (origin, callback) => callback(null, isAllowedOrigin(origin, allowedOrigins)),
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
@@ -88,4 +88,31 @@ export async function createApp(existingServer?: Express): Promise<NestExpressAp
   app.setGlobalPrefix('api/v1');
 
   return app;
+}
+
+/**
+ * Origins are compared as exact strings, so both sides have to be normalised.
+ * `FRONTEND_URL` is easily saved with a trailing slash ("https://app.vercel.app/"),
+ * while a browser never sends one in the `Origin` header - which silently drops
+ * every `Access-Control-Allow-Origin` header and breaks the request.
+ */
+function normalizeOrigin(origin: string): string {
+  return origin.trim().replace(/\/+$/, '').toLowerCase();
+}
+
+/** Accepts one origin or a comma separated list, so previews can be added too. */
+function parseAllowedOrigins(value?: string): string[] {
+  const origins = (value ?? '')
+    .split(',')
+    .map(normalizeOrigin)
+    .filter(Boolean);
+
+  return origins.length > 0 ? origins : ['http://localhost:4000'];
+}
+
+function isAllowedOrigin(origin: string | undefined, allowedOrigins: string[]): boolean {
+  // Same-origin, server-to-server and curl requests send no Origin header.
+  if (!origin) return true;
+
+  return allowedOrigins.includes(normalizeOrigin(origin));
 }
