@@ -1,5 +1,5 @@
 import { doubleCsrf } from 'csrf-csrf';
-import { cookieSameSite } from '../cookies';
+import { cookieFlags } from '../cookies';
 
 export const {
   generateCsrfToken: generateToken,
@@ -24,8 +24,7 @@ export const {
 
   cookieOptions: {
     httpOnly: false,
-    sameSite: cookieSameSite(),
-    secure: process.env.NODE_ENV === 'production',
+    ...cookieFlags(),
     path: '/',
   },
 

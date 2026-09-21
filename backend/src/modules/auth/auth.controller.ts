@@ -10,7 +10,7 @@ import { ResendVerificationDTO } from "./dto/resend-verification.dto";
 import { CurrentUser } from './decorators/current-user.decorator';
 import { GoogleOAuthGuard } from './guards/google-oauth.guard';
 import { RegisterDriverDTO } from './dto/register-driver.dto';
-import { cookieSameSite } from '../../common/cookies';
+import { cookieFlags } from '../../common/cookies';
 
 @Controller("auth")
 export class AuthController {
@@ -128,8 +128,7 @@ export class AuthController {
     private setRefreshToken(res: Response, token: string, expires: Date) {
         res.cookie('refresh_token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: cookieSameSite(),
+            ...cookieFlags(),
             path: '/api/v1/auth',
             expires,
         });
