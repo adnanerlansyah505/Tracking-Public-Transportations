@@ -72,7 +72,7 @@ export async function createApp(existingServer?: Express): Promise<NestExpressAp
 
   // Cors
   app.enableCors({
-    origin: frontendUrl,
+    origin: [frontendUrl],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
